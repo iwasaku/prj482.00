@@ -1,0 +1,27 @@
+{
+  "frame": {
+    "width": 128,
+    "height": 128,
+    "cols": 8,
+    "rows": 6
+  },
+  "animations": {
+    "idle": { "frames": [0, 1, 2, 3], "next": "idle", "frequency": 10 },
+    "crouch": { "frames": [4, 5], "next": "crouch", "frequency": 12 },
+    "guard": { "frames": [6, 7], "next": "guard", "frequency": 12 },
+    "guard_crouch": { "frames": [14, 15], "next": "guard_crouch", "frequency": 12 },
+    "attack_low_light": { "frames": [44, 45, 46], "next": "crouch", "frequency": 4 },
+    "attack_low_kick": { "frames": [20, 21, 22, 23], "next": "crouch", "frequency": 5 },
+    "walk": { "frames": [8, 9, 10, 11, 12, 13], "next": "walk", "frequency": 5 },
+    "jump": { "frames": [16, 17], "next": "jump", "frequency": 8 },
+    "fall": { "frames": [18, 19], "next": "fall", "frequency": 8 },
+    "attack_light": { "frames": [24, 25, 26, 27], "next": "idle", "frequency": 4 },
+    "attack_heavy": { "frames": [32, 33, 34, 35, 36], "next": "idle", "frequency": 5 },
+    "attack_kick": { "frames": [28, 29, 30, 31], "next": "idle", "frequency": 5 },
+    "attack_hadou": { "frames": [32, 26, 27], "next": "idle", "frequency": 5 },
+    "attack_shoryu": { "frames": [16, 35, 17, 19], "next": "idle", "frequency": 4 },
+    "attack_tatsu": { "frames": [28, 29, 30, 31], "next": "idle", "frequency": 3 },
+    "hit": { "frames": [40, 41], "frequency": 6 },
+    "dead": { "frames": [42, 43], "frequency": 8 }
+  }
+}
