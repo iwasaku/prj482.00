@@ -21,7 +21,7 @@ phina.define('SelectScene', {
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 36);
 
     Label({
-      text: '1P: A/D 選択  J 決定   2P: ←/→ 選択  O 決定   SPACE 対戦開始',
+      text: '1P: A/D またはパッド1  J/A 決定    2P: ←/→ またはパッド2  O/A 決定    SPACE/START 開始',
       fontSize: 14,
       fill: '#aaa',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 68);
@@ -148,19 +148,20 @@ phina.define('SelectScene', {
   },
 
   update: function (app) {
+    GamepadHub.poll();
     var kb = app.keyboard;
-    if (kb.getKeyDown('a')) this._move(1, -1);
-    if (kb.getKeyDown('d')) this._move(1, 1);
-    if (kb.getKeyDown('left')) this._move(2, -1);
-    if (kb.getKeyDown('right')) this._move(2, 1);
-    if (kb.getKeyDown('j')) {
+    if (kb.getKeyDown('a') || GamepadHub.down(0, 'left')) this._move(1, -1);
+    if (kb.getKeyDown('d') || GamepadHub.down(0, 'right')) this._move(1, 1);
+    if (kb.getKeyDown('left') || GamepadHub.down(1, 'left')) this._move(2, -1);
+    if (kb.getKeyDown('right') || GamepadHub.down(1, 'right')) this._move(2, 1);
+    if (kb.getKeyDown('j') || GamepadHub.down(0, 'light')) {
       this.p1Locked = !this.p1Locked;
       this._refresh();
     }
-    if (kb.getKeyDown('o') || kb.getKeyDown('1') || kb.getKeyDown('num_1')) {
+    if (kb.getKeyDown('o') || kb.getKeyDown('1') || kb.getKeyDown('num_1') || GamepadHub.down(1, 'light')) {
       this.p2Locked = !this.p2Locked;
       this._refresh();
     }
-    if (kb.getKeyDown('space') && this.p1Locked && this.p2Locked) this._start();
+    if ((kb.getKeyDown('space') || GamepadHub.startDown()) && this.p1Locked && this.p2Locked) this._start();
   },
 });

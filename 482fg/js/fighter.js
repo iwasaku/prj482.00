@@ -88,6 +88,7 @@ phina.define('Fighter', {
     this.name = options.name || 'P1';
     this.charaName = options.charaName || this.name;
     this.keys = options.keys;
+    this.padIndex = options.padIndex != null ? options.padIndex : 0;
     this.moves = options.moves || MOVES;
     this.moveSpeed = options.speed != null ? options.speed : MOVE_SPEED;
     this.jumpVelocity = options.jump != null ? options.jump : JUMP_VELOCITY;
@@ -346,19 +347,19 @@ phina.define('Fighter', {
     this.stateTime += 1;
 
     var kb = app.keyboard;
-    var left = this._pressed(kb, this.keys.left);
-    var right = this._pressed(kb, this.keys.right);
-    var down = this._pressed(kb, this.keys.down);
-    var upHeld = this._pressed(kb, this.keys.up);
-    var up = this._justPressed(kb, this.keys.up);
+    var left = this._pressed(kb, this.keys.left) || GamepadHub.held(this.padIndex, 'left');
+    var right = this._pressed(kb, this.keys.right) || GamepadHub.held(this.padIndex, 'right');
+    var down = this._pressed(kb, this.keys.down) || GamepadHub.held(this.padIndex, 'down');
+    var upHeld = this._pressed(kb, this.keys.up) || GamepadHub.held(this.padIndex, 'up');
+    var up = this._justPressed(kb, this.keys.up) || GamepadHub.down(this.padIndex, 'up');
     this._pushCommand(this._dirCode(left, right, down, upHeld));
     this.inputLeft = left;
     this.inputRight = right;
     this.holdingDown = !!(down && this.onGround);
     this.holdingBack = !!(this.onGround && ((this.facing > 0 && left && !right) || (this.facing < 0 && right && !left)));
-    var light = this._justPressed(kb, this.keys.light);
-    var heavy = this._justPressed(kb, this.keys.heavy);
-    var kick = this._justPressed(kb, this.keys.kick);
+    var light = this._justPressed(kb, this.keys.light) || GamepadHub.down(this.padIndex, 'light');
+    var heavy = this._justPressed(kb, this.keys.heavy) || GamepadHub.down(this.padIndex, 'heavy');
+    var kick = this._justPressed(kb, this.keys.kick) || GamepadHub.down(this.padIndex, 'kick');
 
     if (this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'blockstun') {
       if (light) {
