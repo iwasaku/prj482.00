@@ -17,9 +17,14 @@ var GamepadHub = {
   _prev: [{}, {}],
   _now: [{}, {}],
 
-  poll: function() {
-    this._prev = this._now;
+  poll: function () {
+    // 参照の代入ではなく、前フレームの状態を浅いコピーで保持する
+    this._prev = [
+      Object.assign({}, this._now[0]),
+      Object.assign({}, this._now[1])
+    ];
     this._now = [{}, {}];
+
     var list = [];
     if (navigator.getGamepads) {
       var raw = navigator.getGamepads();
@@ -33,18 +38,18 @@ var GamepadHub = {
     this.count = list.length;
   },
 
-  _btn: function(pad, index) {
+  _btn: function (pad, index) {
     if (!pad || !pad.buttons || !pad.buttons[index]) return false;
     var b = pad.buttons[index];
     return !!(b.pressed || b.value > 0.5);
   },
 
-  _axis: function(pad, index, dir) {
+  _axis: function (pad, index, dir) {
     if (!pad || !pad.axes || pad.axes[index] == null) return false;
     return pad.axes[index] * dir >= PAD_DEADZONE;
   },
 
-  _read: function(pad) {
+  _read: function (pad) {
     var state = {};
     if (!pad) return state;
     var names = Object.keys(PAD_MAP);
@@ -63,18 +68,18 @@ var GamepadHub = {
     return state;
   },
 
-  held: function(index, action) {
+  held: function (index, action) {
     var s = this._now[index];
     return !!(s && s[action]);
   },
 
-  down: function(index, action) {
+  down: function (index, action) {
     var now = this._now[index];
     var prev = this._prev[index];
     return !!(now && now[action] && !(prev && prev[action]));
   },
 
-  startDown: function() {
+  startDown: function () {
     return this.down(0, 'start') || this.down(1, 'start');
   },
 };
