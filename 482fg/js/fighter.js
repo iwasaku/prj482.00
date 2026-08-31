@@ -74,6 +74,11 @@ var COMMANDS = [
 ];
 
 var CMD_BUFFER = 20;
+var DASH_WINDOW = 14;
+var DASH_FWD_SPEED = 11;
+var DASH_BACK_SPEED = 9.5;
+var DASH_FWD_TIME = 12;
+var DASH_BACK_TIME = 16;
 
 phina.define('Fighter', {
   superClass: 'Sprite',
@@ -113,6 +118,14 @@ phina.define('Fighter', {
     this.blockstun = 0;
     this.cmdBuf = [];
     this.queuedShot = null;
+    this.inputClock = 0;
+    this.lastFwdTap = -999;
+    this.lastBackTap = -999;
+    this.prevFwd = false;
+    this.prevBack = false;
+    this.dashDir = 0;
+    this.dashSpeed = 0;
+    this.dashTime = 0;
     this.debugHitboxes = options.debugHitboxes !== false;
     this.baseColor = options.color || '#3aa0ff';
 
@@ -170,7 +183,8 @@ phina.define('Fighter', {
       this.state === 'walk' ||
       this.state === 'jump' ||
       this.state === 'crouch' ||
-      this.state === 'guard'
+      this.state === 'guard' ||
+      this.state === 'dash'
     );
   },
 
@@ -251,6 +265,24 @@ phina.define('Fighter', {
     this.vx = 0;
     this.queuedShot = null;
     this.playAnim(data.anim || 'attack_heavy');
+  },
+
+  startDash: function(dir) {
+    if (!this.onGround || this.holdingDown) return;
+    if (this.state === 'attack' || this.state === 'hit' || this.state === 'dead' || this.state === 'blockstun') return;
+    this.state = 'dash';
+    this.stateTime = 0;
+    this.dashDir = dir;
+    if (dir === this.facing) {
+      this.dashSpeed = DASH_FWD_SPEED;
+      this.dashTime = DASH_FWD_TIME;
+    } else {
+      this.dashSpeed = DASH_BACK_SPEED;
+      this.dashTime = DASH_BACK_TIME;
+      this.invuln = Math.max(this.invuln, 8);
+    }
+    this.vx = dir * this.dashSpeed;
+    this.playAnim('walk');
   },
 
   isGuarding: function() {
@@ -337,6 +369,7 @@ phina.define('Fighter', {
     else if (this.state === 'guard' || this.state === 'blockstun') {
       name = (this.crouching || this.holdingDown) ? 'guard_crouch' : 'guard';
     }
+    else if (this.state === 'dash') name = 'walk';
     else if (this.state === 'crouch') name = 'crouch';
     else if (this.state === 'walk') name = 'walk';
     this.playAnim(name);
@@ -357,6 +390,21 @@ phina.define('Fighter', {
     this.inputRight = right;
     this.holdingDown = !!(down && this.onGround);
     this.holdingBack = !!(this.onGround && ((this.facing > 0 && left && !right) || (this.facing < 0 && right && !left)));
+    this.inputClock += 1;
+    var fwdNow = (this.facing > 0 && right && !left) || (this.facing < 0 && left && !right);
+    var backNow = (this.facing > 0 && left && !right) || (this.facing < 0 && right && !left);
+    if (this.onGround && !this.holdingDown && this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'blockstun' && this.state !== 'attack') {
+      if (fwdNow && !this.prevFwd) {
+        if (this.inputClock - this.lastFwdTap <= DASH_WINDOW) this.startDash(this.facing);
+        this.lastFwdTap = this.inputClock;
+      }
+      if (backNow && !this.prevBack) {
+        if (this.inputClock - this.lastBackTap <= DASH_WINDOW) this.startDash(-this.facing);
+        this.lastBackTap = this.inputClock;
+      }
+    }
+    this.prevFwd = fwdNow;
+    this.prevBack = backNow;
     var light = this._justPressed(kb, this.keys.light) || GamepadHub.down(this.padIndex, 'light');
     var heavy = this._justPressed(kb, this.keys.heavy) || GamepadHub.down(this.padIndex, 'heavy');
     var kick = this._justPressed(kb, this.keys.kick) || GamepadHub.down(this.padIndex, 'kick');
@@ -405,6 +453,12 @@ phina.define('Fighter', {
           this.state = 'idle';
           this.crouching = false;
         }
+      }
+    } else if (this.state === 'dash') {
+      this.vx = this.dashDir * this.dashSpeed;
+      if (this.stateTime >= this.dashTime) {
+        this.state = 'idle';
+        this.vx = 0;
       }
     } else if (this.state !== 'dead') {
       this.vx = 0;
