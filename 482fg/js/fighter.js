@@ -452,9 +452,14 @@ phina.define('Fighter', {
     else if (this.state === 'guard' || this.state === 'blockstun') {
       name = (this.crouching || this.holdingDown) ? 'guard_crouch' : 'guard';
     }
-    else if (this.state === 'dash') name = 'walk';
+    else if (this.state === 'dash') {
+      name = (this.dashDir === this.facing) ? 'walk' : 'walk_back';
+    }
     else if (this.state === 'crouch') name = 'crouch';
-    else if (this.state === 'walk') name = 'walk';
+    else if (this.state === 'walk') {
+      var goingBack = (this.facing > 0 && this.vx < 0) || (this.facing < 0 && this.vx > 0);
+      name = goingBack ? 'walk_back' : 'walk';
+    }
     this.playAnim(name);
   },
 

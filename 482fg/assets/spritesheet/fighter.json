@@ -71,6 +71,18 @@
       "next": "walk",
       "frequency": 5
     },
+    "walk_back": {
+      "frames": [
+        13,
+        12,
+        11,
+        13,
+        9,
+        8
+      ],
+      "next": "walk_back",
+      "frequency": 6
+    },
     "jump": {
       "frames": [
         16,
