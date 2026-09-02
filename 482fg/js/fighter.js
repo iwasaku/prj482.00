@@ -65,6 +65,22 @@ var MOVES = {
     boxW: 70, boxH: 30, boxX: 48, boxY: -40,
     travel: 5.5,
   },
+  throw_ippon: {
+    anim: 'attack_throw',
+    damage: 18, startup: 5, active: 4, recovery: 24,
+    knockback: 8.5, hitstun: 28,
+    boxW: 42, boxH: 86, boxX: 40, boxY: -8,
+    throw: true,
+    throwType: 'ippon',
+  },
+  throw_tomoe: {
+    anim: 'attack_throw',
+    damage: 18, startup: 5, active: 4, recovery: 24,
+    knockback: 8.5, hitstun: 28,
+    boxW: 42, boxH: 86, boxX: 40, boxY: -8,
+    throw: true,
+    throwType: 'tomoe',
+  },
 };
 
 var COMMANDS = [
@@ -83,7 +99,7 @@ var DASH_BACK_TIME = 16;
 phina.define('Fighter', {
   superClass: 'Sprite',
 
-  init: function(options) {
+  init: function (options) {
     options = options || {};
     this.imageName = options.image || 'fighter_p1';
     this.ssName = options.ss || 'fighter_ss';
@@ -159,25 +175,25 @@ phina.define('Fighter', {
     this.nameLabel.setPosition(0, -118);
   },
 
-  onadded: function() {
+  onadded: function () {
     this.hurtbox.addChildTo(this.parent);
     this.attackBox.addChildTo(this.parent);
   },
 
-  playAnim: function(name) {
+  playAnim: function (name) {
     if (!name || !this.anim) return;
     if (this.currentAnimName === name && !this.anim.paused) return;
     this.currentAnimName = name;
     this.anim.gotoAndPlay(name);
   },
 
-  setDebugVisible: function(visible) {
+  setDebugVisible: function (visible) {
     this.debugHitboxes = visible;
     this.hurtbox.visible = visible && this.alive;
     if (!this.attackBox.active) this.attackBox.visible = false;
   },
 
-  canAct: function() {
+  canAct: function () {
     return this.alive && (
       this.state === 'idle' ||
       this.state === 'walk' ||
@@ -188,7 +204,7 @@ phina.define('Fighter', {
     );
   },
 
-  _pressed: function(kb, names) {
+  _pressed: function (kb, names) {
     if (!names) return false;
     var list = Array.isArray(names) ? names : [names];
     for (var i = 0; i < list.length; i++) {
@@ -197,7 +213,7 @@ phina.define('Fighter', {
     return false;
   },
 
-  _justPressed: function(kb, names) {
+  _justPressed: function (kb, names) {
     if (!names) return false;
     var list = Array.isArray(names) ? names : [names];
     for (var i = 0; i < list.length; i++) {
@@ -206,7 +222,7 @@ phina.define('Fighter', {
     return false;
   },
 
-  _dirCode: function(left, right, down, upHeld) {
+  _dirCode: function (left, right, down, upHeld) {
     var fwd = (this.facing > 0 && right) || (this.facing < 0 && left);
     var back = (this.facing > 0 && left) || (this.facing < 0 && right);
     var x = fwd ? 1 : back ? -1 : 0;
@@ -214,12 +230,12 @@ phina.define('Fighter', {
     return 5 + x + y * 3;
   },
 
-  _pushCommand: function(dir) {
+  _pushCommand: function (dir) {
     this.cmdBuf.push(dir);
     if (this.cmdBuf.length > CMD_BUFFER) this.cmdBuf.shift();
   },
 
-  _matchMotion: function(motion) {
+  _matchMotion: function (motion) {
     var compact = [];
     for (var i = 0; i < this.cmdBuf.length; i++) {
       var d = this.cmdBuf[i];
@@ -235,7 +251,7 @@ phina.define('Fighter', {
     return false;
   },
 
-  tryCommand: function(button) {
+  tryCommand: function (button) {
     if (!this.canAct() || this.state === 'jump') return false;
     for (var i = 0; i < COMMANDS.length; i++) {
       var cmd = COMMANDS[i];
@@ -250,7 +266,7 @@ phina.define('Fighter', {
     return false;
   },
 
-  startMove: function(kind, fromCommand) {
+  startMove: function (kind, fromCommand) {
     if (!fromCommand) {
       if (this.crouching && kind === 'light') kind = 'low_light';
       else if (this.crouching && (kind === 'kick' || kind === 'heavy')) kind = 'low_kick';
@@ -267,7 +283,7 @@ phina.define('Fighter', {
     this.playAnim(data.anim || 'attack_heavy');
   },
 
-  startDash: function(dir) {
+  startDash: function (dir) {
     if (!this.onGround || this.holdingDown) return;
     if (this.state === 'attack' || this.state === 'hit' || this.state === 'dead' || this.state === 'blockstun') return;
     this.state = 'dash';
@@ -285,19 +301,20 @@ phina.define('Fighter', {
     this.playAnim('walk');
   },
 
-  isGuarding: function() {
+  isGuarding: function () {
     if (!this.alive || !this.onGround) return false;
-    if (this.state === 'attack' || this.state === 'hit' || this.state === 'dead') return false;
+    if (this.state === 'attack' || this.state === 'hit' || this.state === 'dead' || this.state === 'throwing' || this.state === 'thrown') return false;
     return this.holdingBack || this.state === 'guard' || this.state === 'blockstun';
   },
 
-  canBlock: function(move) {
+  canBlock: function (move) {
+    if (move && move.throw) return false;
     if (!this.isGuarding()) return false;
     if (move && move.low) return !!(this.crouching || this.holdingDown);
     return true;
   },
 
-  block: function(move, dir) {
+  block: function (move, dir) {
     var stun = Math.max(6, Math.floor((move.hitstun || 12) * 0.55));
     this.state = 'blockstun';
     this.stateTime = 0;
@@ -311,37 +328,103 @@ phina.define('Fighter', {
     this.playAnim(this.holdingDown || this.crouching ? 'guard_crouch' : 'guard');
   },
 
-  takeHit: function(move, dir) {
+  takeHit: function (move, dir) {
     if (!this.alive || this.invuln > 0) return false;
+    if (move && move.throw && !this.onGround) return false;
+    if (move && move.throw && this.state === 'attack' && this.move && this.move.throw && this.stateTime <= 8) {
+      this._throwBreak(dir);
+      return 'tech';
+    }
     if (this.canBlock(move)) {
       this.block(move, dir);
       return 'block';
     }
     this.hp = Math.max(0, this.hp - move.damage);
-    this.vx = dir * move.knockback;
-    this.vy = -2.4;
-    this.onGround = false;
-    this.crouching = false;
-    this.state = 'hit';
-    this.stateTime = 0;
-    this.hitstun = move.hitstun;
-    this.invuln = 8;
     this.move = null;
     this.hasHit = false;
     this.attackBox.active = false;
     this.attackBox.visible = false;
+    this.crouching = false;
     if (this.hp <= 0) {
       this.alive = false;
       this.state = 'dead';
+      this.vx = dir * (move.knockback || 4);
       this.vy = -8;
+      this.onGround = false;
       this.playAnim('dead');
-    } else {
-      this.playAnim('hit');
+      return true;
     }
+    if (move && move.throw) {
+      this.state = 'thrown';
+      this.stateTime = 0;
+      this.throwHold = 18;
+      this.throwLaunch = move.knockback || 8;
+      this.throwType = move.throwType || 'ippon';
+      this.throwDir = this.throwType === 'tomoe' ? -dir : dir;
+      this.vx = 0;
+      this.vy = 0;
+      this.onGround = true;
+      this.y = GROUND_Y;
+      this.hitstun = move.hitstun || 28;
+      this.invuln = 8;
+      this.playAnim('hit');
+      this._pinThrown();
+      return 'throw';
+    }
+    this.vx = dir * move.knockback;
+    this.vy = -2.4;
+    this.onGround = false;
+    this.state = 'hit';
+    this.stateTime = 0;
+    this.hitstun = move.hitstun;
+    this.invuln = 8;
+    this.playAnim('hit');
     return true;
   },
 
-  updateBoxes: function() {
+  startThrowing: function () {
+    this.state = 'throwing';
+    this.stateTime = 0;
+    this.throwHold = 18;
+    this.vx = 0;
+    this.vy = 0;
+    this.move = null;
+    this.attackBox.active = false;
+    this.playAnim('attack_throw');
+  },
+
+  _pinThrown: function () {
+    if (!this.thrower) return;
+    this.y = GROUND_Y;
+    this.onGround = true;
+    this.x = this.thrower.x - this.throwDir * 40;
+    if (this.throwType === 'ippon') {
+      this.facing = this.throwDir;
+    } else {
+      this.facing = -this.throwDir;
+    }
+    this.thrower.facing = -this.throwDir;
+    this.thrower.vx = 0;
+    this.thrower.vy = 0;
+  },
+
+  _throwBreak: function (dir) {
+    this.vx = -dir * 5;
+    this.vy = -3;
+    this.onGround = false;
+    this.crouching = false;
+    this.state = 'hit';
+    this.stateTime = 0;
+    this.hitstun = 16;
+    this.invuln = 10;
+    this.move = null;
+    this.hasHit = false;
+    this.attackBox.active = false;
+    this.attackBox.visible = false;
+    this.playAnim('hit');
+  },
+
+  updateBoxes: function () {
     if (this.crouching || (this.state === 'attack' && this.move && this.move.low)) {
       this.hurtbox.height = 58;
     } else {
@@ -362,8 +445,8 @@ phina.define('Fighter', {
     this.hurtbox.visible = this.debugHitboxes && this.alive;
   },
 
-  _syncAnim: function() {
-    if (this.state === 'attack' || this.state === 'hit' || this.state === 'dead') return;
+  _syncAnim: function () {
+    if (this.state === 'attack' || this.state === 'hit' || this.state === 'dead' || this.state === 'throwing' || this.state === 'thrown') return;
     var name = 'idle';
     if (!this.onGround) name = this.vy < 0 ? 'jump' : 'fall';
     else if (this.state === 'guard' || this.state === 'blockstun') {
@@ -375,7 +458,7 @@ phina.define('Fighter', {
     this.playAnim(name);
   },
 
-  update: function(app) {
+  update: function (app) {
     if (this.invuln > 0) this.invuln -= 1;
     this.stateTime += 1;
 
@@ -385,14 +468,15 @@ phina.define('Fighter', {
     var down = this._pressed(kb, this.keys.down) || GamepadHub.held(this.padIndex, 'down');
     var upHeld = this._pressed(kb, this.keys.up) || GamepadHub.held(this.padIndex, 'up');
     var up = this._justPressed(kb, this.keys.up) || GamepadHub.down(this.padIndex, 'up');
+    var fwdNow = (this.facing > 0 && right && !left) || (this.facing < 0 && left && !right);
+    var backNow = (this.facing > 0 && left && !right) || (this.facing < 0 && right && !left);
+
     this._pushCommand(this._dirCode(left, right, down, upHeld));
     this.inputLeft = left;
     this.inputRight = right;
     this.holdingDown = !!(down && this.onGround);
     this.holdingBack = !!(this.onGround && ((this.facing > 0 && left && !right) || (this.facing < 0 && right && !left)));
     this.inputClock += 1;
-    var fwdNow = (this.facing > 0 && right && !left) || (this.facing < 0 && left && !right);
-    var backNow = (this.facing > 0 && left && !right) || (this.facing < 0 && right && !left);
     if (this.onGround && !this.holdingDown && this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'blockstun' && this.state !== 'attack') {
       if (fwdNow && !this.prevFwd) {
         if (this.inputClock - this.lastFwdTap <= DASH_WINDOW) this.startDash(this.facing);
@@ -405,12 +489,24 @@ phina.define('Fighter', {
     }
     this.prevFwd = fwdNow;
     this.prevBack = backNow;
+
+
     var light = this._justPressed(kb, this.keys.light) || GamepadHub.down(this.padIndex, 'light');
     var heavy = this._justPressed(kb, this.keys.heavy) || GamepadHub.down(this.padIndex, 'heavy');
     var kick = this._justPressed(kb, this.keys.kick) || GamepadHub.down(this.padIndex, 'kick');
+    var lightHeld = this._pressed(kb, this.keys.light) || GamepadHub.held(this.padIndex, 'light');
+    var heavyHeld = this._pressed(kb, this.keys.heavy) || GamepadHub.held(this.padIndex, 'heavy');
+
+    // 前＋(弱/強) で一本背負い、後＋(弱/強) で巴投げ
+    var throwIpponInput = fwdNow && ((light && heavyHeld) || (heavy && lightHeld));
+    var throwTomoeInput = backNow && ((light && heavyHeld) || (heavy && lightHeld));
 
     if (this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'blockstun') {
-      if (light) {
+      if (throwIpponInput) {
+        this.startMove('throw_ippon');
+      } else if (throwTomoeInput) {
+        this.startMove('throw_tomoe');
+      } else if (light) {
         if (!this.tryCommand('punch')) this.startMove('light');
       } else if (heavy) {
         if (!this.tryCommand('punch')) this.startMove('heavy');
@@ -453,6 +549,23 @@ phina.define('Fighter', {
           this.state = 'idle';
           this.crouching = false;
         }
+      }
+    } else if (this.state === 'throwing') {
+      this.vx = 0;
+      this.vy = 0;
+      if (this.stateTime >= this.throwHold) this.state = 'idle';
+    } else if (this.state === 'thrown') {
+      this.vx = 0;
+      this.vy = 0;
+      this._pinThrown();
+      if (this.stateTime >= this.throwHold) {
+        this.state = 'hit';
+        this.stateTime = 0;
+        // throwDir 方向（巴投げなら左方向）へ吹き飛ばす
+        this.vx = this.throwDir * this.throwLaunch;
+        this.vy = -6.5;
+        this.onGround = false;
+        this.thrower = null;
       }
     } else if (this.state === 'dash') {
       this.vx = this.dashDir * this.dashSpeed;

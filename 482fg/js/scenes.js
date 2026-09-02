@@ -21,7 +21,7 @@ phina.define('GameTitleScene', {
     }).addChildTo(this).setPosition(this.gridX.center(), 190);
 
     Label({
-      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  B弱 N強 Mキック\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  I弱 O強 Pキック\nパッド: 十字/スティック 移動  A/X弱  Y強  B/R1キック  START決定\n必殺  ↓↘→+弱/強  波動    →↓↘+弱/強  昇龍    ↓↙←+キック  竜巻',
+      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  B弱 N強 Mキック\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  I弱 O強 Pキック\nパッド: 十字/スティック 移動  A/X弱  Y強  B/R1キック  START決定\n必殺  ↓↘→+弱/強 波動  →↓↘+弱/強 昇龍  ↓↙←+キック 竜巻\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
       fontSize: 18,
       fill: '#ddd',
       align: 'center',
@@ -170,10 +170,13 @@ phina.define('VersusScene', {
     this.p1.wakeUp();
     this.p2.wakeUp();
 
-    this.p1.facing = this.p1.x <= this.p2.x ? 1 : -1;
-    this.p2.facing = this.p2.x <= this.p1.x ? 1 : -1;
-
-    this._separate();
+    var inThrow = this.p1.state === 'throwing' || this.p1.state === 'thrown' ||
+      this.p2.state === 'throwing' || this.p2.state === 'thrown';
+    if (!inThrow) {
+      this.p1.facing = this.p1.x <= this.p2.x ? 1 : -1;
+      this.p2.facing = this.p2.x <= this.p1.x ? 1 : -1;
+      this._separate();
+    }
     this._spawnShot(this.p1);
     this._spawnShot(this.p2);
     this._updateShots();
@@ -231,12 +234,25 @@ phina.define('VersusScene', {
     if (!attacker.attackBox.active || attacker.hasHit) return;
     if (!defender.alive) return;
     if (aabbOverlap(attacker.attackBox.getRect(), defender.hurtbox.getRect())) {
+      var isThrow = !!(attacker.move && attacker.move.throw);
+      if (isThrow) defender.thrower = attacker;
       var hit = defender.takeHit(attacker.move, attacker.facing);
+      if (!hit && isThrow) defender.thrower = null;
       if (hit) {
         attacker.hasHit = true;
         attacker.attackBox.active = false;
         if (hit === 'block') this.hitstop = 2;
-        else this.hitstop = attacker.move === MOVES.heavy ? 6 : 3;
+        else if (hit === 'tech') {
+          defender.thrower = null;
+          attacker._throwBreak(-attacker.facing);
+          this.hitstop = 4;
+        } else if (hit === 'throw') {
+          attacker.startThrowing();
+          this.hitstop = 6;
+        } else {
+          defender.thrower = null;
+          this.hitstop = attacker.move === MOVES.heavy ? 6 : 3;
+        }
       }
     }
   },
