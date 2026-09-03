@@ -153,6 +153,18 @@ phina.define('VersusScene', {
       fontWeight: 'bold',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 210);
 
+    this.fadeOverlay = RectangleShape({
+      width: SCREEN_WIDTH + 4,
+      height: SCREEN_HEIGHT + 4,
+      fill: '#000',
+      stroke: null,
+    }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+    this.fadeOverlay.alpha = 0;
+    this.fadeOverlay.hide();
+    this.fadePhase = null;
+    this.fadeAlpha = 0;
+    this.FADE_SPEED = 0.04;
+
     this._refreshWinMarks();
     this._startIntro();
   },
@@ -205,6 +217,13 @@ phina.define('VersusScene', {
       this.p2.setDebugVisible(this.debug);
     }
 
+    if (this.fadePhase) {
+      this.p1.sleep();
+      this.p2.sleep();
+      this._updateFade();
+      return;
+    }
+
     if (this.introPhase) {
       this.p1.sleep();
       this.p2.sleep();
@@ -217,15 +236,7 @@ phina.define('VersusScene', {
       this.p2.wakeUp();
       if (this.finishWait > 0) this.finishWait -= 1;
       if (this.finishWait <= 0) {
-        if (this.matchOver) {
-          this.exit({
-            winner: this.winner,
-            p1Wins: this.p1Wins,
-            p2Wins: this.p2Wins,
-          });
-        } else {
-          this._nextRound();
-        }
+        this._beginFadeOut();
       }
       return;
     }
@@ -342,14 +353,11 @@ phina.define('VersusScene', {
     this._refreshWinMarks();
 
     this.matchOver = this.p1Wins >= this.winsNeeded || this.p2Wins >= this.winsNeeded;
-    if (this.matchOver) {
-      this.winner = this.p1Wins > this.p2Wins ? '1P' : '2P';
-      this.koLabel.text = this.winner + ' WIN';
-    } else if (roundWinner === 'DRAW') {
-      this.koLabel.text = 'DRAW';
-    } else {
-      this.koLabel.text = roundWinner + ' WIN';
-    }
+    if (this.p1Wins > this.p2Wins) this.winner = '1P';
+    else if (this.p2Wins > this.p1Wins) this.winner = '2P';
+    else this.winner = 'DRAW';
+
+    this.koLabel.text = roundWinner === 'DRAW' ? 'DRAW' : 'K.O.';
     this.finishWait = 90;
   },
 
@@ -372,7 +380,45 @@ phina.define('VersusScene', {
     this.p1.resetRound(260, 1);
     this.p2.resetRound(700, -1);
     this._updateHud();
-    this._startIntro();
+  },
+
+  _beginFadeOut: function () {
+    this.fadePhase = 'out';
+    this.fadeAlpha = 0;
+    this.fadeOverlay.alpha = 0;
+    this.fadeOverlay.show();
+  },
+
+  _updateFade: function () {
+    if (this.fadePhase === 'out') {
+      this.fadeAlpha = Math.min(1, this.fadeAlpha + this.FADE_SPEED);
+      this.fadeOverlay.alpha = this.fadeAlpha;
+      if (this.fadeAlpha >= 1) {
+        if (this.matchOver) {
+          this.exit({
+            winner: this.winner,
+            p1Wins: this.p1Wins,
+            p2Wins: this.p2Wins,
+          });
+          return;
+        }
+        this._nextRound();
+        this.fadePhase = 'in';
+        this.fadeAlpha = 1;
+        this.fadeOverlay.alpha = 1;
+      }
+      return;
+    }
+
+    if (this.fadePhase === 'in') {
+      this.fadeAlpha = Math.max(0, this.fadeAlpha - this.FADE_SPEED);
+      this.fadeOverlay.alpha = this.fadeAlpha;
+      if (this.fadeAlpha <= 0) {
+        this.fadePhase = null;
+        this.fadeOverlay.hide();
+        this._startIntro();
+      }
+    }
   },
 
   _startIntro: function () {
