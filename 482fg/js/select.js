@@ -12,6 +12,9 @@ phina.define('SelectScene', {
     this.p2Index = Math.min(1, this.roster.length - 1);
     this.p1Locked = false;
     this.p2Locked = false;
+    this.ready = false;
+    this.readyWait = 0;
+    this.READY_FRAMES = 120;
 
     Label({
       text: 'CHARACTER SELECT',
@@ -21,7 +24,7 @@ phina.define('SelectScene', {
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 36);
 
     Label({
-      text: '1P: A/D またはパッド1  B/A 決定    2P: ←/→ またはパッド2  I/A 決定    SPACE/START 開始',
+      text: '1P: A/D またはパッド1  B/A 決定    2P: ←/→ またはパッド2  I/A 決定',
       fontSize: 14,
       fill: '#aaa',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 68);
@@ -69,6 +72,33 @@ phina.define('SelectScene', {
       fontSize: 16,
       fill: '#ffe08a',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 400);
+
+    this.readyOverlay = RectangleShape({
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT,
+      fill: 'rgba(8, 10, 16, 0.72)',
+      stroke: null,
+    }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+    this.readyOverlay.hide();
+
+    this.readyTitle = Label({
+      text: 'READY',
+      fontSize: 56,
+      fill: '#ffe08a',
+      fontWeight: 'bold',
+    }).addChildTo(this.readyOverlay).setPosition(0, -40);
+
+    this.readyMatchup = Label({
+      text: '',
+      fontSize: 22,
+      fill: '#fff',
+    }).addChildTo(this.readyOverlay).setPosition(0, 24);
+
+    this.readySub = Label({
+      text: '対戦を開始します',
+      fontSize: 16,
+      fill: '#ccc',
+    }).addChildTo(this.readyOverlay).setPosition(0, 58);
 
     this._refresh();
   },
@@ -119,8 +149,20 @@ phina.define('SelectScene', {
       }
     }
 
-    if (this.p1Locked && this.p2Locked) this.hint.text = 'SPACE で対戦開始';
+    if (this.ready) this.hint.text = '';
+    else if (this.p1Locked && this.p2Locked) this.hint.text = '';
     else this.hint.text = '';
+  },
+
+  _beginReady: function () {
+    if (this.ready) return;
+    if (this.p1Index === this.p2Index) return;
+    this.ready = true;
+    this.readyWait = this.READY_FRAMES;
+    var p1 = this.roster[this.p1Index];
+    var p2 = this.roster[this.p2Index];
+    this.readyMatchup.text = '1P  ' + p1.name + '   VS   2P  ' + p2.name;
+    this.readyOverlay.show();
   },
 
   _move: function (player, dir) {
@@ -149,6 +191,12 @@ phina.define('SelectScene', {
 
   update: function (app) {
     GamepadHub.poll();
+    if (this.ready) {
+      this.readyWait -= 1;
+      if (this.readyWait <= 0) this._start();
+      return;
+    }
+
     var kb = app.keyboard;
     if (kb.getKeyDown('a') || GamepadHub.down(0, 'left')) this._move(1, -1);
     if (kb.getKeyDown('d') || GamepadHub.down(0, 'right')) this._move(1, 1);
@@ -157,11 +205,12 @@ phina.define('SelectScene', {
     if (kb.getKeyDown('b') || GamepadHub.down(0, 'light')) {
       this.p1Locked = !this.p1Locked;
       this._refresh();
+      if (this.p1Locked && this.p2Locked) this._beginReady();
     }
     if (kb.getKeyDown('i') || kb.getKeyDown('1') || kb.getKeyDown('num_1') || GamepadHub.down(1, 'light')) {
       this.p2Locked = !this.p2Locked;
       this._refresh();
+      if (this.p1Locked && this.p2Locked) this._beginReady();
     }
-    if ((kb.getKeyDown('space') || GamepadHub.startDown()) && this.p1Locked && this.p2Locked) this._start();
   },
 });

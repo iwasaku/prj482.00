@@ -47,12 +47,17 @@ phina.define('VersusScene', {
     this.superInit(options);
     this.backgroundColor = '#1b2230';
     this.ended = false;
+    this.matchOver = false;
     this.finishWait = 0;
     this.timeLeft = MATCH_TIME;
     this.frame = 0;
     this.hitstop = 0;
     this.debug = true;
     this.shots = [];
+    this.winsNeeded = 2;
+    this.p1Wins = (options && options.p1Wins) || 0;
+    this.p2Wins = (options && options.p2Wins) || 0;
+    this.round = this.p1Wins + this.p2Wins + 1;
 
     var p1Data = getCharacter(options && options.p1Id);
     var p2Data = getCharacter(options && options.p2Id);
@@ -125,12 +130,58 @@ phina.define('VersusScene', {
       fill: '#ffe08a',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 62);
 
+    this.roundLabel = Label({
+      text: 'ROUND ' + this.round,
+      fontSize: 12,
+      fill: '#ddd',
+    }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 78);
+
+    this.p1WinMarks = this._winMarks(24, 58, 0);
+    this.p2WinMarks = this._winMarks(SCREEN_WIDTH - 24, 58, 1);
+
     this.koLabel = Label({
       text: '',
       fontSize: 64,
       fill: '#fff',
       fontWeight: 'bold',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 200);
+
+    this.introLabel = Label({
+      text: '',
+      fontSize: 64,
+      fill: '#ffe08a',
+      fontWeight: 'bold',
+    }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 210);
+
+    this._refreshWinMarks();
+    this._startIntro();
+  },
+
+  _winMarks: function (x, y, originX) {
+    var wrap = DisplayElement().addChildTo(this).setPosition(x, y);
+    wrap.dots = [];
+    for (var i = 0; i < this.winsNeeded; i++) {
+      var dot = CircleShape({
+        radius: 7,
+        fill: '#222',
+        stroke: '#fff',
+        strokeWidth: 1,
+      }).addChildTo(wrap);
+      var ox = originX ? -i * 20 : i * 20;
+      dot.setPosition(ox, 0);
+      wrap.dots.push(dot);
+    }
+    return wrap;
+  },
+
+  _refreshWinMarks: function () {
+    var i;
+    for (i = 0; i < this.p1WinMarks.dots.length; i++) {
+      this.p1WinMarks.dots[i].fill = i < this.p1Wins ? '#3aa0ff' : '#222';
+    }
+    for (i = 0; i < this.p2WinMarks.dots.length; i++) {
+      this.p2WinMarks.dots[i].fill = i < this.p2Wins ? '#ff8a3a' : '#222';
+    }
   },
 
   _bar: function (x, y, w, color, originX) {
@@ -154,11 +205,28 @@ phina.define('VersusScene', {
       this.p2.setDebugVisible(this.debug);
     }
 
+    if (this.introPhase) {
+      this.p1.sleep();
+      this.p2.sleep();
+      this._updateIntro();
+      return;
+    }
+
     if (this.ended) {
       this.p1.wakeUp();
       this.p2.wakeUp();
       if (this.finishWait > 0) this.finishWait -= 1;
-      if (this.finishWait <= 0) this.exit({ winner: this.winner });
+      if (this.finishWait <= 0) {
+        if (this.matchOver) {
+          this.exit({
+            winner: this.winner,
+            p1Wins: this.p1Wins,
+            p2Wins: this.p2Wins,
+          });
+        } else {
+          this._nextRound();
+        }
+      }
       return;
     }
     if (this.hitstop > 0) {
@@ -265,12 +333,73 @@ phina.define('VersusScene', {
 
   _finish: function () {
     this.ended = true;
-    var winner = 'DRAW';
-    if (this.p1.hp > this.p2.hp) winner = '1P';
-    else if (this.p2.hp > this.p1.hp) winner = '2P';
-    this.winner = winner;
-    this.koLabel.text = winner === 'DRAW' ? 'DRAW' : winner + ' WIN';
+    var roundWinner = 'DRAW';
+    if (this.p1.hp > this.p2.hp) roundWinner = '1P';
+    else if (this.p2.hp > this.p1.hp) roundWinner = '2P';
+
+    if (roundWinner === '1P') this.p1Wins += 1;
+    else if (roundWinner === '2P') this.p2Wins += 1;
+    this._refreshWinMarks();
+
+    this.matchOver = this.p1Wins >= this.winsNeeded || this.p2Wins >= this.winsNeeded;
+    if (this.matchOver) {
+      this.winner = this.p1Wins > this.p2Wins ? '1P' : '2P';
+      this.koLabel.text = this.winner + ' WIN';
+    } else if (roundWinner === 'DRAW') {
+      this.koLabel.text = 'DRAW';
+    } else {
+      this.koLabel.text = roundWinner + ' WIN';
+    }
     this.finishWait = 90;
+  },
+
+  _clearShots: function () {
+    this.shots.forEach(function (shot) {
+      if (shot.parent) shot.remove();
+    });
+    this.shots = [];
+  },
+
+  _nextRound: function () {
+    this._clearShots();
+    this.ended = false;
+    this.hitstop = 0;
+    this.timeLeft = MATCH_TIME;
+    this.frame = 0;
+    this.round = this.p1Wins + this.p2Wins + 1;
+    this.roundLabel.text = 'ROUND ' + this.round;
+    this.koLabel.text = '';
+    this.p1.resetRound(260, 1);
+    this.p2.resetRound(700, -1);
+    this._updateHud();
+    this._startIntro();
+  },
+
+  _startIntro: function () {
+    this.introPhase = 'round';
+    this.introWait = 75;
+    this.introLabel.text = 'ROUND ' + this.round;
+    this.introLabel.fill = '#ffe08a';
+    this.introLabel.fontSize = 56;
+    this.p1.sleep();
+    this.p2.sleep();
+  },
+
+  _updateIntro: function () {
+    this.introWait -= 1;
+    if (this.introWait > 0) return;
+    if (this.introPhase === 'round') {
+      this.introPhase = 'fight';
+      this.introWait = 50;
+      this.introLabel.text = 'FIGHT';
+      this.introLabel.fill = '#fff';
+      this.introLabel.fontSize = 72;
+      return;
+    }
+    this.introPhase = null;
+    this.introLabel.text = '';
+    this.p1.wakeUp();
+    this.p2.wakeUp();
   },
 });
 
@@ -281,6 +410,8 @@ phina.define('GameResultScene', {
     this.superInit(options);
     this.backgroundColor = '#101010';
     var winner = (options && options.winner) || 'DRAW';
+    var p1Wins = (options && options.p1Wins) || 0;
+    var p2Wins = (options && options.p2Wins) || 0;
 
     Label({
       text: winner === 'DRAW' ? 'DRAW' : winner + ' WIN',
@@ -288,6 +419,12 @@ phina.define('GameResultScene', {
       fill: '#ffe08a',
       fontWeight: 'bold',
     }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-1));
+
+    Label({
+      text: p1Wins + '  -  ' + p2Wins,
+      fontSize: 28,
+      fill: '#ddd',
+    }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(0.4));
 
     Label({
       text: 'SPACE でタイトルへ',

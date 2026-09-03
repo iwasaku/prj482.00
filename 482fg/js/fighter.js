@@ -175,6 +175,45 @@ phina.define('Fighter', {
     this.nameLabel.setPosition(0, -118);
   },
 
+  resetRound: function (x, facing) {
+    this.x = x;
+    this.y = GROUND_Y;
+    this.facing = facing || 1;
+    this.vx = 0;
+    this.vy = 0;
+    this.onGround = true;
+    this.state = 'idle';
+    this.stateTime = 0;
+    this.invuln = 0;
+    this.hitstun = 0;
+    this.move = null;
+    this.hasHit = false;
+    this.alive = true;
+    this.hp = this.maxHp;
+    this.holdingDown = false;
+    this.holdingBack = false;
+    this.inputLeft = false;
+    this.inputRight = false;
+    this.crouching = false;
+    this.blockstun = 0;
+    this.cmdBuf = [];
+    this.queuedShot = null;
+    this.inputClock = 0;
+    this.lastFwdTap = -999;
+    this.lastBackTap = -999;
+    this.prevFwd = false;
+    this.prevBack = false;
+    this.dashDir = 0;
+    this.dashSpeed = 0;
+    this.dashTime = 0;
+    this.thrower = null;
+    this.alpha = 1;
+    this.attackBox.active = false;
+    this.attackBox.visible = false;
+    this.playAnim('idle');
+    this.wakeUp();
+  },
+
   onadded: function () {
     this.hurtbox.addChildTo(this.parent);
     this.attackBox.addChildTo(this.parent);

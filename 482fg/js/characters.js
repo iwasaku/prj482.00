@@ -24,7 +24,7 @@ var CHARACTER_ROSTER = [
     image: 'char_asumi',
     imagePath: 'assets/image/char_asumi.png',
     ss: 'fighter_ss',
-    color: '#c8d0dc',
+    color: '#9b59d0',
     stats: { speed: 4.0, jump: -14.2, hp: 96 },
     moves: {
       kick: { boxW: 84, boxX: 72, damage: 13 },
