@@ -52,9 +52,10 @@ function pickRandomStage() {
 }
 
 function collectStageAssets(assets) {
-  assets = assets || { image: {}, spritesheet: {} };
+  assets = assets || { image: {}, spritesheet: {}, sound: {} };
   assets.image = assets.image || {};
-  STAGE_ROSTER.forEach(function(stage) {
+  assets.sound = assets.sound || {};
+  STAGE_ROSTER.forEach(function (stage) {
     assets.image[stage.image] = stage.imagePath || ('assets/image/' + stage.image + '.png');
   });
   return assets;

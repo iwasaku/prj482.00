@@ -36,7 +36,11 @@ phina.define('GameTitleScene', {
 
   update: function (app) {
     GamepadHub.poll();
-    if (app.keyboard.getKeyDown('space') || GamepadHub.startDown()) this.exit();
+    if (app.keyboard.getKeyDown('space') || GamepadHub.startDown()) {
+      SoundFx.unlock();
+      SoundFx.play('ui_ok');
+      this.exit();
+    }
   },
 });
 
@@ -57,7 +61,7 @@ phina.define('VersusScene', {
     this.winsNeeded = 2;
     this.p1Wins = (options && options.p1Wins) || 0;
     this.p2Wins = (options && options.p2Wins) || 0;
-    this.round = this.p1Wins + this.p2Wins + 1;
+    this.round = (options && options.round) || 1;
 
     var p1Data = getCharacter(options && options.p1Id);
     var p2Data = getCharacter(options && options.p2Id);
@@ -265,9 +269,9 @@ phina.define('VersusScene', {
 
     this.frame += 1;
     if (this.frame % 60 === 0) this.timeLeft -= 1;
-    if (this.p1.hp <= 0 || this.p2.hp <= 0 || this.timeLeft <= 0) {
-      this._finish();
-    }
+    var ko = this.p1.hp <= 0 || this.p2.hp <= 0;
+    if (ko) this._finish('ko');
+    else if (this.timeLeft <= 0) this._finish('time');
   },
 
   _separate: function () {
@@ -301,6 +305,7 @@ phina.define('VersusScene', {
         if (result) {
           shot.hasHit = true;
           shot.remove();
+          SoundFx.impact(result, shot.move);
           self.hitstop = result === 'block' ? 2 : 4;
           return false;
         }
@@ -320,6 +325,7 @@ phina.define('VersusScene', {
       if (hit) {
         attacker.hasHit = true;
         attacker.attackBox.active = false;
+        SoundFx.impact(hit, attacker.move);
         if (hit === 'block') this.hitstop = 2;
         else if (hit === 'tech') {
           defender.thrower = null;
@@ -342,14 +348,23 @@ phina.define('VersusScene', {
     this.timerLabel.text = String(Math.max(0, this.timeLeft));
   },
 
-  _finish: function () {
+  _finish: function (reason) {
+    if (this.ended) return;
     this.ended = true;
+    var timedOut = reason === 'time' || (this.timeLeft <= 0 && this.p1.hp > 0 && this.p2.hp > 0);
+    var p1Ratio = this.p1.maxHp > 0 ? this.p1.hp / this.p1.maxHp : 0;
+    var p2Ratio = this.p2.maxHp > 0 ? this.p2.hp / this.p2.maxHp : 0;
+    var barEps = 1 / this.hpBarWidth;
     var roundWinner = 'DRAW';
-    if (this.p1.hp > this.p2.hp) roundWinner = '1P';
-    else if (this.p2.hp > this.p1.hp) roundWinner = '2P';
+    if (p1Ratio > p2Ratio + barEps) roundWinner = '1P';
+    else if (p2Ratio > p1Ratio + barEps) roundWinner = '2P';
 
     if (roundWinner === '1P') this.p1Wins += 1;
     else if (roundWinner === '2P') this.p2Wins += 1;
+    else {
+      this.p1Wins += 1;
+      this.p2Wins += 1;
+    }
     this._refreshWinMarks();
 
     this.matchOver = this.p1Wins >= this.winsNeeded || this.p2Wins >= this.winsNeeded;
@@ -357,8 +372,14 @@ phina.define('VersusScene', {
     else if (this.p2Wins > this.p1Wins) this.winner = '2P';
     else this.winner = 'DRAW';
 
-    this.koLabel.text = roundWinner === 'DRAW' ? 'DRAW' : 'K.O.';
+    this.koLabel.fontSize = timedOut ? 52 : 64;
+    if (timedOut) this.koLabel.text = 'TIME OVER';
+    else if (roundWinner === 'DRAW') this.koLabel.text = 'DRAW';
+    else this.koLabel.text = 'K.O.';
     this.finishWait = 90;
+    if (timedOut) SoundFx.play('timeover');
+    else if (roundWinner === 'DRAW') SoundFx.play('draw');
+    else SoundFx.play('ko');
   },
 
   _clearShots: function () {
@@ -374,7 +395,7 @@ phina.define('VersusScene', {
     this.hitstop = 0;
     this.timeLeft = MATCH_TIME;
     this.frame = 0;
-    this.round = this.p1Wins + this.p2Wins + 1;
+    this.round += 1;
     this.roundLabel.text = 'ROUND ' + this.round;
     this.koLabel.text = '';
     this.p1.resetRound(260, 1);
@@ -429,6 +450,10 @@ phina.define('VersusScene', {
     this.introLabel.fontSize = 56;
     this.p1.sleep();
     this.p2.sleep();
+    if (this.round === 1) SoundFx.play('round1');
+    else if (this.round === 2) SoundFx.play('round2');
+    else if (this.round === 3) SoundFx.play('round3');
+    else SoundFx.play('round1');
   },
 
   _updateIntro: function () {
@@ -440,6 +465,7 @@ phina.define('VersusScene', {
       this.introLabel.text = 'FIGHT';
       this.introLabel.fill = '#fff';
       this.introLabel.fontSize = 72;
+      SoundFx.play('fight');
       return;
     }
     this.introPhase = null;
@@ -477,10 +503,17 @@ phina.define('GameResultScene', {
       fontSize: 22,
       fill: '#ddd',
     }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(2));
+
+    if (winner === '1P') SoundFx.play('p1_win');
+    else if (winner === '2P') SoundFx.play('p2_win');
+    else SoundFx.play('draw');
   },
 
   update: function (app) {
     GamepadHub.poll();
-    if (app.keyboard.getKeyDown('space') || GamepadHub.startDown()) this.exit();
+    if (app.keyboard.getKeyDown('space') || GamepadHub.startDown()) {
+      SoundFx.play('ui_ok');
+      this.exit();
+    }
   },
 });

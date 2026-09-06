@@ -163,6 +163,7 @@ phina.define('SelectScene', {
     var p2 = this.roster[this.p2Index];
     this.readyMatchup.text = '1P  ' + p1.name + '   VS   2P  ' + p2.name;
     this.readyOverlay.show();
+    SoundFx.play('ui_ready');
   },
 
   _move: function (player, dir) {
@@ -178,6 +179,7 @@ phina.define('SelectScene', {
     }
     if (player === 1) this.p1Index = next;
     else this.p2Index = next;
+    SoundFx.play('ui_move');
     this._refresh();
   },
 
@@ -204,11 +206,13 @@ phina.define('SelectScene', {
     if (kb.getKeyDown('right') || GamepadHub.down(1, 'right')) this._move(2, 1);
     if (kb.getKeyDown('b') || GamepadHub.down(0, 'light')) {
       this.p1Locked = !this.p1Locked;
+      SoundFx.play(this.p1Locked ? 'ui_ok' : 'ui_move');
       this._refresh();
       if (this.p1Locked && this.p2Locked) this._beginReady();
     }
     if (kb.getKeyDown('i') || kb.getKeyDown('1') || kb.getKeyDown('num_1') || GamepadHub.down(1, 'light')) {
       this.p2Locked = !this.p2Locked;
+      SoundFx.play(this.p2Locked ? 'ui_ok' : 'ui_move');
       this._refresh();
       if (this.p1Locked && this.p2Locked) this._beginReady();
     }

@@ -93,6 +93,7 @@ function collectCharacterAssets(base) {
   var assets = base || { image: {}, spritesheet: {}, sound: {} };
   assets.image = assets.image || {};
   assets.spritesheet = assets.spritesheet || {};
+  assets.sound = assets.sound || {};
   CHARACTER_ROSTER.forEach(function (chara) {
     assets.image[chara.image] = chara.imagePath || ('assets/image/' + chara.image + '.png');
     if (chara.ssPath) assets.spritesheet[chara.ss] = chara.ssPath;

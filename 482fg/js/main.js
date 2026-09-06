@@ -5,13 +5,13 @@ var SCREEN_HEIGHT = 540;
 var GROUND_Y = 460;
 var MATCH_TIME = 60;
 
-var ASSETS = collectStageAssets(collectCharacterAssets({
+var ASSETS = SoundFx.collect(collectStageAssets(collectCharacterAssets({
   image: {
   },
   spritesheet: {
     fighter_ss: 'assets/spritesheet/fighter.json',
   },
-}));
+})));
 
 var P1_KEYS = {
   left: 'a',
@@ -46,6 +46,9 @@ phina.main(function () {
       { className: 'VersusScene', label: 'versus', nextLabel: 'result' },
       { className: 'GameResultScene', label: 'result', nextLabel: 'title' },
     ],
+  });
+  app.on('enterframe', function () {
+    if (app.keyboard.getKeyDown('f8')) SoundFx.toggleMute();
   });
   app.run();
 });

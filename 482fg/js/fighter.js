@@ -173,6 +173,12 @@ phina.define('Fighter', {
       fontWeight: 'bold',
     }).addChildTo(this);
     this.nameLabel.setPosition(0, -118);
+    this.applyFacing();
+  },
+
+  applyFacing: function () {
+    this.scaleX = this.facing >= 0 ? 1 : -1;
+    if (this.nameLabel) this.nameLabel.scaleX = this.scaleX;
   },
 
   resetRound: function (x, facing) {
@@ -211,6 +217,7 @@ phina.define('Fighter', {
     this.attackBox.active = false;
     this.attackBox.visible = false;
     this.playAnim('idle');
+    this.applyFacing();
     this.wakeUp();
   },
 
@@ -320,6 +327,7 @@ phina.define('Fighter', {
     this.vx = 0;
     this.queuedShot = null;
     this.playAnim(data.anim || 'attack_heavy');
+    SoundFx.swing(data);
   },
 
   startDash: function (dir) {
@@ -338,6 +346,7 @@ phina.define('Fighter', {
     }
     this.vx = dir * this.dashSpeed;
     this.playAnim('walk');
+    SoundFx.play('dash');
   },
 
   isGuarding: function () {
@@ -631,6 +640,7 @@ phina.define('Fighter', {
             this.vy = this.jumpVelocity;
             this.onGround = false;
             this.state = 'jump';
+            SoundFx.play('jump');
           } else if (this.onGround) {
             this.state = this.vx !== 0 ? 'walk' : 'idle';
           }
@@ -643,10 +653,12 @@ phina.define('Fighter', {
     this.y += this.vy;
 
     if (this.y >= GROUND_Y) {
+      var landed = !this.onGround && this.vy > 2;
       this.y = GROUND_Y;
       this.vy = 0;
       this.onGround = true;
       if (this.state === 'jump') this.state = 'idle';
+      if (landed && this.alive && this.state !== 'dead') SoundFx.play('land');
     } else {
       this.onGround = false;
       this.crouching = false;
