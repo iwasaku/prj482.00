@@ -21,6 +21,7 @@ var P1_KEYS = {
   light: 'b',
   heavy: 'n',
   kick: 'm',
+  special: 'v',
 };
 
 var P2_KEYS = {
@@ -31,6 +32,7 @@ var P2_KEYS = {
   light: ['i', '1', 'num_1'],
   heavy: ['o', '2', 'num_2'],
   kick: ['p', '3', 'num_3'],
+  special: ['k', '4', 'num_4'],
 };
 
 phina.main(function () {

@@ -84,9 +84,9 @@ var MOVES = {
 };
 
 var COMMANDS = [
-  { motion: [6, 2, 3], button: 'punch', move: 'shoryu' },
-  { motion: [2, 3, 6], button: 'punch', move: 'hadou' },
-  { motion: [2, 1, 4], button: 'kick', move: 'tatsu' },
+  { dir: 'up', move: 'shoryu' },
+  { dir: 'forward', move: 'hadou' },
+  { dir: 'back', move: 'tatsu' },
 ];
 
 var CMD_BUFFER = 20;
@@ -297,17 +297,20 @@ phina.define('Fighter', {
     return false;
   },
 
-  tryCommand: function (button) {
-    if (!this.canAct() || this.state === 'jump') return false;
+  trySpecial: function (upHeld, fwd, back) {
+    if (!this.canAct() || this.state === 'jump' || !this.onGround) return false;
+    var dir = null;
+    if (upHeld) dir = 'up';
+    else if (fwd) dir = 'forward';
+    else if (back) dir = 'back';
+    if (!dir) return false;
     for (var i = 0; i < COMMANDS.length; i++) {
       var cmd = COMMANDS[i];
-      if (cmd.button !== button) continue;
+      if (cmd.dir !== dir) continue;
       if (!this.moves[cmd.move]) continue;
-      if (this._matchMotion(cmd.motion)) {
-        this.cmdBuf = [];
-        this.startMove(cmd.move, true);
-        return true;
-      }
+      this.cmdBuf = [];
+      this.startMove(cmd.move, true);
+      return true;
     }
     return false;
   },
@@ -547,6 +550,7 @@ phina.define('Fighter', {
     var light = this._justPressed(kb, this.keys.light) || GamepadHub.down(this.padIndex, 'light');
     var heavy = this._justPressed(kb, this.keys.heavy) || GamepadHub.down(this.padIndex, 'heavy');
     var kick = this._justPressed(kb, this.keys.kick) || GamepadHub.down(this.padIndex, 'kick');
+    var special = this._justPressed(kb, this.keys.special) || GamepadHub.down(this.padIndex, 'special');
     var lightHeld = this._pressed(kb, this.keys.light) || GamepadHub.held(this.padIndex, 'light');
     var heavyHeld = this._pressed(kb, this.keys.heavy) || GamepadHub.held(this.padIndex, 'heavy');
 
@@ -559,12 +563,14 @@ phina.define('Fighter', {
         this.startMove('throw_ippon');
       } else if (throwTomoeInput) {
         this.startMove('throw_tomoe');
+      } else if (special) {
+        this.trySpecial(upHeld, fwdNow, backNow);
       } else if (light) {
-        if (!this.tryCommand('punch')) this.startMove('light');
+        this.startMove('light');
       } else if (heavy) {
-        if (!this.tryCommand('punch')) this.startMove('heavy');
+        this.startMove('heavy');
       } else if (kick) {
-        if (!this.tryCommand('kick')) this.startMove('kick');
+        this.startMove('kick');
       }
     }
 

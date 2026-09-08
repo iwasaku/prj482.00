@@ -21,7 +21,7 @@ phina.define('GameTitleScene', {
     }).addChildTo(this).setPosition(this.gridX.center(), 190);
 
     Label({
-      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  B弱 N強 Mキック\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  I弱 O強 Pキック\nパッド: 十字/スティック 移動  A/X弱  Y強  B/R1キック  START決定\n必殺  ↓↘→+弱/強 波動  →↓↘+弱/強 昇龍  ↓↙←+キック 竜巻\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
+      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  B弱 N強 Mキック  V必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  I弱 O強 Pキック  K必殺\nパッド: 十字/スティック 移動  A/X弱  Y強  B/R1キック  L1/L2必殺  START決定\n必殺  前+必殺 波動  後+必殺 竜巻  上+必殺 昇龍\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
       fontSize: 18,
       fill: '#ddd',
       align: 'center',

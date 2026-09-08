@@ -10,6 +10,7 @@ var PAD_MAP = {
   light: { buttons: [0, 2] },
   heavy: { buttons: [3] },
   kick: { buttons: [1, 5] },
+  special: { buttons: [4, 6] },
   start: { buttons: [9, 8] },
 };
 
