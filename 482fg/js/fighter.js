@@ -115,6 +115,8 @@ phina.define('Fighter', {
     this.jumpVelocity = options.jump != null ? options.jump : JUMP_VELOCITY;
     this.hp = options.hp != null ? options.hp : MAX_HP;
     this.maxHp = this.hp;
+    this.gauge = options.gauge != null ? options.gauge : 0;
+    this.maxGauge = 100;
     this.facing = options.facing || 1;
     this.vx = 0;
     this.vy = 0;
@@ -219,6 +221,12 @@ phina.define('Fighter', {
     this.playAnim('idle');
     this.applyFacing();
     this.wakeUp();
+  },
+
+  addGauge: function (amount) {
+    if (!amount) return this.gauge;
+    this.gauge = Math.max(0, Math.min(this.maxGauge, this.gauge + amount));
+    return this.gauge;
   },
 
   onadded: function () {

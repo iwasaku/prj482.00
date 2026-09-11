@@ -44,6 +44,74 @@ phina.define('GameTitleScene', {
   },
 });
 
+phina.define('SuperGauge', {
+  superClass: 'DisplayElement',
+
+  init: function (options) {
+    this.superInit();
+    options = options || {};
+    this.side = options.side || 'left';
+    this.max = options.max || 100;
+    this.value = 0;
+    this.levels = 3;
+    this.segW = options.segW || 72;
+    this.gap = 3;
+    this.heights = [8, 14, 22];
+    this.fillColor = options.fillColor || '#ffe08a';
+    this.emptyColor = options.emptyColor || '#1a1a1a';
+    this.blinkT = 0;
+
+    var originX = this.side === 'left' ? 1 : 0;
+    this.segments = [];
+    for (var i = 0; i < this.levels; i++) {
+      var h = this.heights[i];
+      var wrap = DisplayElement().addChildTo(this);
+      var ox = (this.side === 'left' ? -i : i) * (this.segW + this.gap);
+      wrap.setPosition(ox, 0);
+
+      var bg = RectangleShape({
+        width: this.segW,
+        height: h,
+        fill: this.emptyColor,
+        stroke: 'rgba(255,255,255,0.85)',
+        strokeWidth: 1,
+      }).addChildTo(wrap);
+      bg.origin.set(originX, 1);
+      bg.setPosition(0, 0);
+
+      var fill = RectangleShape({
+        width: 0.001,
+        height: Math.max(2, h - 2),
+        fill: this.fillColor,
+        stroke: null,
+      }).addChildTo(wrap);
+      fill.origin.set(originX, 1);
+      fill.setPosition(originX === 1 ? -1 : 1, -1);
+
+      this.segments.push({ bg: bg, fill: fill });
+    }
+  },
+
+  setValue: function (v) {
+    this.value = Math.max(0, Math.min(this.max, v == null ? 0 : v));
+  },
+
+  update: function () {
+    this.blinkT += 0.14;
+    var pulse = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(this.blinkT));
+    for (var i = 0; i < this.levels; i++) {
+      var start = Math.round(i * this.max / this.levels);
+      var end = Math.round((i + 1) * this.max / this.levels);
+      var span = Math.max(1, end - start);
+      var ratio = Math.max(0, Math.min(1, (this.value - start) / span));
+      var full = this.value >= end;
+      var seg = this.segments[i];
+      seg.fill.width = Math.max(0.001, (this.segW - 2) * ratio);
+      seg.fill.alpha = full ? pulse : 1;
+    }
+  },
+});
+
 phina.define('VersusScene', {
   superClass: 'DisplayScene',
 
@@ -142,6 +210,17 @@ phina.define('VersusScene', {
 
     this.p1WinMarks = this._winMarks(24, 58, 0);
     this.p2WinMarks = this._winMarks(SCREEN_WIDTH - 24, 58, 1);
+
+    this.p1Gauge = SuperGauge({
+      side: 'left',
+      fillColor: p1Data.color,
+      emptyColor: '#141414',
+    }).addChildTo(this).setPosition(24 + 72 * 3 + 3 * 2, SCREEN_HEIGHT - 10);
+    this.p2Gauge = SuperGauge({
+      side: 'right',
+      fillColor: p2Data.color,
+      emptyColor: '#141414',
+    }).addChildTo(this).setPosition(SCREEN_WIDTH - (24 + 72 * 3 + 3 * 2), SCREEN_HEIGHT - 10);
 
     this.koLabel = Label({
       text: '',
@@ -306,6 +385,7 @@ phina.define('VersusScene', {
           shot.hasHit = true;
           shot.remove();
           SoundFx.impact(result, shot.move);
+          self._applyGauge(shot.owner, defender, result);
           self.hitstop = result === 'block' ? 2 : 4;
           return false;
         }
@@ -325,6 +405,7 @@ phina.define('VersusScene', {
       if (hit) {
         attacker.hasHit = true;
         attacker.attackBox.active = false;
+        this._applyGauge(attacker, defender, hit);
         SoundFx.impact(hit, attacker.move);
         if (hit === 'block') this.hitstop = 2;
         else if (hit === 'tech') {
@@ -342,9 +423,22 @@ phina.define('VersusScene', {
     }
   },
 
+  _applyGauge: function (attacker, defender, result) {
+    if (!result || result === 'tech') return;
+    if (result === 'block') {
+      attacker.addGauge(3);
+      defender.addGauge(2);
+    } else {
+      attacker.addGauge(8);
+      defender.addGauge(5);
+    }
+  },
+
   _updateHud: function () {
     this.p1Bar.width = Math.max(0.001, this.hpBarWidth * (this.p1.hp / this.p1.maxHp));
     this.p2Bar.width = Math.max(0.001, this.hpBarWidth * (this.p2.hp / this.p2.maxHp));
+    this.p1Gauge.setValue(this.p1.gauge);
+    this.p2Gauge.setValue(this.p2.gauge);
     this.timerLabel.text = String(Math.max(0, this.timeLeft));
   },
 
