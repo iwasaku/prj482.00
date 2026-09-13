@@ -120,6 +120,7 @@ var SoundFx = {
     if (move.projectile) this.play('hadou');
     else if (move.launch) this.play('shoryu');
     else if (move.travel) this.play('tatsu');
+    else if (move.super) this.play('shoryu');
     else if (move.throw) this.play('whoosh_heavy');
     else if ((move.damage || 0) >= 15 || (move.startup || 0) >= 10) this.play('whoosh_heavy');
     else this.play('whoosh');

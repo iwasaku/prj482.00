@@ -21,7 +21,7 @@ phina.define('GameTitleScene', {
     }).addChildTo(this).setPosition(this.gridX.center(), 190);
 
     Label({
-      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  B弱 N強 Mキック  V必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  I弱 O強 Pキック  K必殺\nパッド: 十字/スティック 移動  A/X弱  Y強  B/R1キック  L1/L2必殺  START決定\n必殺  前+必殺 波動  後+必殺 竜巻  上+必殺 昇龍\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
+      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  B弱 N強 Mキック  V必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  I弱 O強 Pキック  K必殺\nパッド: 十字/スティック 移動  A/X弱  Y強  B/R1キック  L1/L2必殺  START決定\n必殺  前+必殺 波動  後+必殺 竜巻  上+必殺 昇龍  下+必殺 超必殺(ゲージ100)\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
       fontSize: 18,
       fill: '#ddd',
       align: 'center',
@@ -247,6 +247,16 @@ phina.define('VersusScene', {
     this.fadePhase = null;
     this.fadeAlpha = 0;
     this.FADE_SPEED = 0.04;
+    this.cinematic = null;
+    this.superSparks = [];
+    this.superOverlay = RectangleShape({
+      width: SCREEN_WIDTH + 4,
+      height: SCREEN_HEIGHT + 4,
+      fill: '#120008',
+      stroke: null,
+    }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+    this.superOverlay.alpha = 0;
+    this.superOverlay.hide();
 
     this._refreshWinMarks();
     this._startIntro();
@@ -323,6 +333,14 @@ phina.define('VersusScene', {
       }
       return;
     }
+    if (this.cinematic) {
+      this.p1.sleep();
+      this.p2.sleep();
+      this._updateCinematic();
+      this._updateHud();
+      return;
+    }
+
     if (this.hitstop > 0) {
       this.hitstop -= 1;
       this.p1.sleep();
@@ -333,7 +351,9 @@ phina.define('VersusScene', {
     this.p2.wakeUp();
 
     var inThrow = this.p1.state === 'throwing' || this.p1.state === 'thrown' ||
-      this.p2.state === 'throwing' || this.p2.state === 'thrown';
+      this.p2.state === 'throwing' || this.p2.state === 'thrown' ||
+      this.p1.state === 'super_cinematic' || this.p1.state === 'super_victim' ||
+      this.p2.state === 'super_cinematic' || this.p2.state === 'super_victim';
     if (!inThrow) {
       this.p1.facing = this.p1.x <= this.p2.x ? 1 : -1;
       this.p2.facing = this.p2.x <= this.p1.x ? 1 : -1;
@@ -412,6 +432,9 @@ phina.define('VersusScene', {
           defender.thrower = null;
           attacker._throwBreak(-attacker.facing);
           this.hitstop = 4;
+        } else if (hit === 'super') {
+          defender.thrower = null;
+          this._startCinematic(attacker, defender);
         } else if (hit === 'throw') {
           attacker.startThrowing();
           this.hitstop = 6;
@@ -423,8 +446,135 @@ phina.define('VersusScene', {
     }
   },
 
+  _startCinematic: function (attacker, defender) {
+    attacker.state = 'super_cinematic';
+    attacker.stateTime = 0;
+    attacker.vx = 0;
+    attacker.vy = 0;
+    attacker.attackBox.active = false;
+    attacker.playAnim('attack_throw');
+    defender.state = 'super_victim';
+    defender.vx = 0;
+    defender.vy = 0;
+    defender.y = GROUND_Y;
+    defender.onGround = true;
+    defender.playAnim('hit');
+    var mid = (attacker.x + defender.x) / 2;
+    attacker.x = mid - attacker.facing * 24;
+    defender.x = mid + attacker.facing * 28;
+    attacker.y = GROUND_Y;
+    attacker.onGround = true;
+    this.cinematic = {
+      attacker: attacker,
+      defender: defender,
+      move: attacker.move,
+      t: 0,
+      hits: 0,
+      maxHits: 10,
+      hitGap: 6,
+    };
+    this.superSparks = [];
+    this.superOverlay.show();
+    this.superOverlay.alpha = 0.82;
+    SoundFx.play('shoryu');
+  },
+
+  _spawnSuperSpark: function () {
+    var spark = RectangleShape({
+      width: 16 + Math.random() * 28,
+      height: 5 + Math.random() * 10,
+      fill: Math.random() > 0.5 ? '#fff' : '#ff4a4a',
+      stroke: null,
+    }).addChildTo(this);
+    spark.setPosition(
+      SCREEN_WIDTH / 2 + (Math.random() - 0.5) * 140,
+      250 + (Math.random() - 0.5) * 90
+    );
+    spark.rotation = Math.random() * 180;
+    spark.life = 7;
+    this.superSparks.push(spark);
+  },
+
+  _clearSuperSparks: function () {
+    this.superSparks.forEach(function (s) {
+      if (s.parent) s.remove();
+    });
+    this.superSparks = [];
+  },
+
+  _updateCinematic: function () {
+    var cin = this.cinematic;
+    cin.t += 1;
+    var attacker = cin.attacker;
+    var defender = cin.defender;
+    attacker.vx = 0;
+    attacker.vy = 0;
+    defender.vx = 0;
+    defender.vy = 0;
+    attacker.y = GROUND_Y;
+    defender.y = GROUND_Y;
+
+    if (cin.t >= 8 && cin.hits < cin.maxHits && (cin.t - 8) % cin.hitGap === 0) {
+      cin.hits += 1;
+      this._spawnSuperSpark();
+      SoundFx.play('hit_heavy');
+      defender.playAnim('hit');
+      attacker.playAnim('attack_throw');
+    }
+
+    var remain = [];
+    for (var i = 0; i < this.superSparks.length; i++) {
+      var s = this.superSparks[i];
+      s.life -= 1;
+      s.alpha = Math.max(0, s.life / 7);
+      if (s.life <= 0) s.remove();
+      else remain.push(s);
+    }
+    this.superSparks = remain;
+
+    var fadeStart = 8 + cin.maxHits * cin.hitGap + 10;
+    if (cin.t > fadeStart) {
+      this.superOverlay.alpha = Math.max(0, this.superOverlay.alpha - 0.08);
+    }
+
+    if (cin.t < fadeStart + 16) return;
+
+    this._clearSuperSparks();
+    this.superOverlay.hide();
+    this.superOverlay.alpha = 0;
+    var move = cin.move || MOVES.shungoku;
+    var dmg = move.damage || 48;
+    defender.hp = Math.max(0, defender.hp - dmg);
+    attacker.move = null;
+    attacker.hasHit = false;
+    attacker.state = 'idle';
+    attacker.playAnim('idle');
+    if (defender.hp <= 0) {
+      defender.alive = false;
+      defender.state = 'dead';
+      defender.vx = attacker.facing * (move.knockback || 10);
+      defender.vy = -9;
+      defender.onGround = false;
+      defender.playAnim('dead');
+    } else {
+      defender.state = 'hit';
+      defender.stateTime = 0;
+      defender.hitstun = move.hitstun || 36;
+      defender.invuln = 10;
+      defender.vx = attacker.facing * (move.knockback || 10);
+      defender.vy = -7;
+      defender.onGround = false;
+      defender.playAnim('hit');
+    }
+    this.cinematic = null;
+    this.p1.wakeUp();
+    this.p2.wakeUp();
+    this._updateHud();
+    if (defender.hp <= 0) this._finish('ko');
+  },
+
   _applyGauge: function (attacker, defender, result) {
-    if (!result || result === 'tech') return;
+    if (!result || result === 'tech' || result === 'super') return;
     if (result === 'block') {
       attacker.addGauge(3);
       defender.addGauge(2);
