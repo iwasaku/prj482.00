@@ -7,9 +7,11 @@ var MATCH_TIME = 60;
 
 var ASSETS = SoundFx.collect(collectStageAssets(collectCharacterAssets({
   image: {
+    hadou: 'assets/image/hadou.png',
   },
   spritesheet: {
     fighter_ss: 'assets/spritesheet/fighter.json',
+    hadou_ss: 'assets/spritesheet/hadou.json',
   },
 })));
 
