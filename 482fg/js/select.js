@@ -12,6 +12,7 @@ phina.define('SelectScene', {
     this.p2Index = Math.min(1, this.roster.length - 1);
     this.p1Locked = false;
     this.p2Locked = false;
+    this.cpuMode = false;
     this.ready = false;
     this.readyWait = 0;
     this.READY_FRAMES = 120;
@@ -24,10 +25,16 @@ phina.define('SelectScene', {
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 36);
 
     Label({
-      text: '1P: A/D またはパッド1  B/A 決定    2P: ←/→ またはパッド2  I/A 決定',
+      text: '1P: A/D  B決定    2P: ←/→  I決定    C で CPU対戦',
       fontSize: 14,
       fill: '#aaa',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 68);
+
+    this.modeLabel = Label({
+      text: 'VS 2P',
+      fontSize: 16,
+      fill: '#ffe08a',
+    }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 92);
 
     this.p1Preview = this._preview(150, 230, 1);
     this.p2Preview = this._preview(SCREEN_WIDTH - 150, 230, -1);
@@ -127,7 +134,7 @@ phina.define('SelectScene', {
     this._setPreview(this.p1Preview, p1);
     this._setPreview(this.p2Preview, p2);
     this.p1Name.text = '1P  ' + p1.name + (this.p1Locked ? '  OK' : '');
-    this.p2Name.text = '2P  ' + p2.name + (this.p2Locked ? '  OK' : '');
+    this.p2Name.text = (this.cpuMode ? 'CPU  ' : '2P  ') + p2.name + (this.p2Locked ? '  OK' : '');
     this.p1Name.fill = p1.color;
     this.p2Name.fill = p2.color;
     this.p1Meta.text = p1.title + '  SPD ' + p1.stats.speed + '  HP ' + p1.stats.hp;
@@ -161,7 +168,7 @@ phina.define('SelectScene', {
     this.readyWait = this.READY_FRAMES;
     var p1 = this.roster[this.p1Index];
     var p2 = this.roster[this.p2Index];
-    this.readyMatchup.text = '1P  ' + p1.name + '   VS   2P  ' + p2.name;
+    this.readyMatchup.text = '1P  ' + p1.name + '   VS   ' + (this.cpuMode ? 'CPU  ' : '2P  ') + p2.name;
     this.readyOverlay.show();
     SoundFx.play('ui_ready');
   },
@@ -188,6 +195,7 @@ phina.define('SelectScene', {
     this.exit({
       p1Id: this.roster[this.p1Index].id,
       p2Id: this.roster[this.p2Index].id,
+      cpu: this.cpuMode,
     });
   },
 
@@ -204,8 +212,16 @@ phina.define('SelectScene', {
     if (kb.getKeyDown('d') || GamepadHub.down(0, 'right')) this._move(1, 1);
     if (kb.getKeyDown('left') || GamepadHub.down(1, 'left')) this._move(2, -1);
     if (kb.getKeyDown('right') || GamepadHub.down(1, 'right')) this._move(2, 1);
+    if (kb.getKeyDown('c')) {
+      this.cpuMode = !this.cpuMode;
+      this.modeLabel.text = this.cpuMode ? 'VS CPU' : 'VS 2P';
+      if (!this.cpuMode) this.p2Locked = false;
+      SoundFx.play('ui_move');
+      this._refresh();
+    }
     if (kb.getKeyDown('b') || GamepadHub.down(0, 'light')) {
       this.p1Locked = !this.p1Locked;
+      if (this.cpuMode) this.p2Locked = this.p1Locked;
       SoundFx.play(this.p1Locked ? 'ui_ok' : 'ui_move');
       this._refresh();
       if (this.p1Locked && this.p2Locked) this._beginReady();

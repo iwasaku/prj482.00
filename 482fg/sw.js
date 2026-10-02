@@ -1,4 +1,4 @@
-const CACHE_NAME = '482-fighter-v3';
+const CACHE_NAME = '482-fighter-v4';
 
 const PRECACHE = [
   './',
@@ -8,6 +8,7 @@ const PRECACHE = [
   './js/hitbox.js',
   './js/gamepad.js',
   './js/fighter.js',
+  './js/cpu.js',
   './js/characters.js',
   './js/stages.js',
   './js/select.js',

@@ -122,6 +122,10 @@ phina.define('Fighter', {
     this.charaName = options.charaName || this.name;
     this.keys = options.keys;
     this.padIndex = options.padIndex != null ? options.padIndex : 0;
+    this.cpu = !!options.cpu;
+    this.cpuBrain = this.cpu ? CpuController(this) : null;
+    this.opponent = null;
+    this.shots = null;
     this.moves = options.moves || MOVES;
     this.moveSpeed = options.speed != null ? options.speed : MOVE_SPEED;
     this.jumpVelocity = options.jump != null ? options.jump : JUMP_VELOCITY;
@@ -188,6 +192,7 @@ phina.define('Fighter', {
     }).addChildTo(this);
     this.nameLabel.setPosition(0, -118);
     this.applyFacing();
+    if (this.cpuBrain) this.cpuBrain.reset();
   },
 
   applyFacing: function () {
@@ -233,6 +238,7 @@ phina.define('Fighter', {
     this.playAnim('idle');
     this.applyFacing();
     this.wakeUp();
+    if (this.cpuBrain) this.cpuBrain.reset();
   },
 
   addGauge: function (amount) {
@@ -568,11 +574,12 @@ phina.define('Fighter', {
     this.stateTime += 1;
 
     var kb = app.keyboard;
-    var left = this._pressed(kb, this.keys.left) || GamepadHub.held(this.padIndex, 'left');
-    var right = this._pressed(kb, this.keys.right) || GamepadHub.held(this.padIndex, 'right');
-    var down = this._pressed(kb, this.keys.down) || GamepadHub.held(this.padIndex, 'down');
-    var upHeld = this._pressed(kb, this.keys.up) || GamepadHub.held(this.padIndex, 'up');
-    var up = this._justPressed(kb, this.keys.up) || GamepadHub.down(this.padIndex, 'up');
+    if (this.cpu && this.cpuBrain) this.cpuBrain.think(this.opponent, this.shots);
+    var left = this.cpu ? !!this.cpuLeft : (this._pressed(kb, this.keys.left) || GamepadHub.held(this.padIndex, 'left'));
+    var right = this.cpu ? !!this.cpuRight : (this._pressed(kb, this.keys.right) || GamepadHub.held(this.padIndex, 'right'));
+    var down = this.cpu ? !!this.cpuDown : (this._pressed(kb, this.keys.down) || GamepadHub.held(this.padIndex, 'down'));
+    var upHeld = this.cpu ? !!this.cpuUp : (this._pressed(kb, this.keys.up) || GamepadHub.held(this.padIndex, 'up'));
+    var up = this.cpu ? !!this.cpuUp : (this._justPressed(kb, this.keys.up) || GamepadHub.down(this.padIndex, 'up'));
     var fwdNow = (this.facing > 0 && right && !left) || (this.facing < 0 && left && !right);
     var backNow = (this.facing > 0 && left && !right) || (this.facing < 0 && right && !left);
 
@@ -595,12 +602,12 @@ phina.define('Fighter', {
     this.prevFwd = fwdNow;
     this.prevBack = backNow;
 
-    var light = this._justPressed(kb, this.keys.light) || GamepadHub.down(this.padIndex, 'light');
-    var heavy = this._justPressed(kb, this.keys.heavy) || GamepadHub.down(this.padIndex, 'heavy');
-    var kick = this._justPressed(kb, this.keys.kick) || GamepadHub.down(this.padIndex, 'kick');
-    var special = this._justPressed(kb, this.keys.special) || GamepadHub.down(this.padIndex, 'special');
-    var lightHeld = this._pressed(kb, this.keys.light) || GamepadHub.held(this.padIndex, 'light');
-    var heavyHeld = this._pressed(kb, this.keys.heavy) || GamepadHub.held(this.padIndex, 'heavy');
+    var light = this.cpu ? !!this.cpuLight : (this._justPressed(kb, this.keys.light) || GamepadHub.down(this.padIndex, 'light'));
+    var heavy = this.cpu ? !!this.cpuHeavy : (this._justPressed(kb, this.keys.heavy) || GamepadHub.down(this.padIndex, 'heavy'));
+    var kick = this.cpu ? !!this.cpuKick : (this._justPressed(kb, this.keys.kick) || GamepadHub.down(this.padIndex, 'kick'));
+    var special = this.cpu ? !!this.cpuSpecial : (this._justPressed(kb, this.keys.special) || GamepadHub.down(this.padIndex, 'special'));
+    var lightHeld = this.cpu ? !!this.cpuLightHeld : (this._pressed(kb, this.keys.light) || GamepadHub.held(this.padIndex, 'light'));
+    var heavyHeld = this.cpu ? !!this.cpuHeavyHeld : (this._pressed(kb, this.keys.heavy) || GamepadHub.held(this.padIndex, 'heavy'));
 
     var throwIpponInput = fwdNow && ((light && heavyHeld) || (heavy && lightHeld));
     var throwTomoeInput = backNow && ((light && heavyHeld) || (heavy && lightHeld));

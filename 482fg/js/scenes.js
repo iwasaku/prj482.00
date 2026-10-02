@@ -129,7 +129,7 @@ phina.define('VersusScene', {
     this.winsNeeded = 2;
     this.p1Wins = (options && options.p1Wins) || 0;
     this.p2Wins = (options && options.p2Wins) || 0;
-    this.round = (options && options.round) || 1;
+    this.cpuMode = !!(options && options.cpu);
 
     var p1Data = getCharacter(options && options.p1Id);
     var p2Data = getCharacter(options && options.p2Id);
@@ -160,6 +160,7 @@ phina.define('VersusScene', {
       charaName: p2Data.name,
       keys: P2_KEYS,
       padIndex: 1,
+      cpu: this.cpuMode,
       facing: -1,
       image: p2Data.image,
       ss: p2Data.ss,
@@ -169,6 +170,10 @@ phina.define('VersusScene', {
       hp: p2Data.stats.hp,
       moves: mergeMoves(p2Data.moves),
     }).addChildTo(this).setPosition(700, GROUND_Y);
+    this.p1.opponent = this.p2;
+    this.p2.opponent = this.p1;
+    this.p1.shots = this.shots;
+    this.p2.shots = this.shots;
 
     this.hpBarWidth = 360;
     this.p1BarBg = this._bar(24, 40, this.hpBarWidth, '#222', 0);
@@ -183,7 +188,7 @@ phina.define('VersusScene', {
       align: 'left',
     }).addChildTo(this).setPosition(24, 18);
     Label({
-      text: '2P ' + p2Data.name,
+      text: (this.cpuMode ? 'CPU ' : '2P ') + p2Data.name,
       fontSize: 14,
       fill: '#fff',
       align: 'right',
