@@ -129,6 +129,7 @@ phina.define('VersusScene', {
     this.winsNeeded = 2;
     this.p1Wins = (options && options.p1Wins) || 0;
     this.p2Wins = (options && options.p2Wins) || 0;
+    this.round = (options && options.round) || 1;
     this.cpuMode = !!(options && options.cpu);
 
     var p1Data = getCharacter(options && options.p1Id);
