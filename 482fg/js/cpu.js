@@ -204,5 +204,3 @@ phina.define('CpuController', {
     f.cpuHeavyHeld = false;
   },
 });
-
-phina.globalize();
