@@ -9,7 +9,8 @@ var PAD_MAP = {
   down: { buttons: [13], axis: 1, dir: 1 },
   light: { buttons: [3] },       // Y 弱パンチ
   heavy: { buttons: [2] },       // X 強パンチ
-  kick: { buttons: [0, 1] },     // A / B キック
+  kick: { buttons: [0] },         // A 弱キック
+  kickHeavy: { buttons: [1] },    // B 強キック
   special: { buttons: [5, 7] },  // R1 / R2 必殺
   start: { buttons: [9, 8] },
 };

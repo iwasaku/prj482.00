@@ -25,7 +25,7 @@ phina.define('SelectScene', {
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 36);
 
     Label({
-      text: '1P: A/D  B決定    2P: ←/→  I決定    C で CPU対戦',
+      text: '1P: A/D  G決定    2P: ←/→  8決定    C で CPU対戦    パッド: Y決定',
       fontSize: 14,
       fill: '#aaa',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 68);
@@ -219,14 +219,14 @@ phina.define('SelectScene', {
       SoundFx.play('ui_move');
       this._refresh();
     }
-    if (kb.getKeyDown('b') || GamepadHub.down(0, 'light')) {
+    if (kb.getKeyDown('g') || GamepadHub.down(0, 'light')) {
       this.p1Locked = !this.p1Locked;
       if (this.cpuMode) this.p2Locked = this.p1Locked;
       SoundFx.play(this.p1Locked ? 'ui_ok' : 'ui_move');
       this._refresh();
       if (this.p1Locked && this.p2Locked) this._beginReady();
     }
-    if (kb.getKeyDown('i') || kb.getKeyDown('1') || kb.getKeyDown('num_1') || GamepadHub.down(1, 'light')) {
+    if (kb.getKeyDown('8') || kb.getKeyDown('num_8') || GamepadHub.down(1, 'light')) {
       this.p2Locked = !this.p2Locked;
       SoundFx.play(this.p2Locked ? 'ui_ok' : 'ui_move');
       this._refresh();

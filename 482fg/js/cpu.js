@@ -102,7 +102,7 @@ phina.define('CpuController', {
       return;
     }
     if (dist > 96) {
-      this._set(Math.random() < 0.35 ? this._kick() : this._walk(8));
+      this._set(Math.random() < 0.35 ? (Math.random() < 0.55 ? this._kick() : this._kickHeavy()) : this._walk(8));
       return;
     }
     var roll = Math.random();
@@ -141,6 +141,10 @@ phina.define('CpuController', {
 
   _kick: function () {
     return { cancelable: false, steps: [{ frames: 4, fwd: true }, { frames: 1, kick: true }, { frames: 8 }] };
+  },
+
+  _kickHeavy: function () {
+    return { cancelable: false, steps: [{ frames: 5, fwd: true }, { frames: 1, kickHeavy: true }, { frames: 10 }] };
   },
 
   _low: function () {
@@ -183,6 +187,7 @@ phina.define('CpuController', {
     f.cpuLight = !!step.light;
     f.cpuHeavy = !!step.heavy;
     f.cpuKick = !!step.kick;
+    f.cpuKickHeavy = !!step.kickHeavy;
     f.cpuSpecial = !!step.special;
     f.cpuLightHeld = !!step.light || !!step.lightHeld;
     f.cpuHeavyHeld = !!step.heavy || !!step.heavyHeld;
@@ -199,6 +204,7 @@ phina.define('CpuController', {
     f.cpuLight = false;
     f.cpuHeavy = false;
     f.cpuKick = false;
+    f.cpuKickHeavy = false;
     f.cpuSpecial = false;
     f.cpuLightHeld = false;
     f.cpuHeavyHeld = false;

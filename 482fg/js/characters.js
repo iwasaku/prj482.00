@@ -10,7 +10,7 @@ var CHARACTER_ROSTER = [
   {
     id: 'murata',
     name: 'MURATA',
-    title: '標準',
+    title: 'ヒーロー',
     image: 'char_murata',
     imagePath: 'assets/image/char_murata.png',
     ss: 'fighter_ss',
@@ -20,21 +20,23 @@ var CHARACTER_ROSTER = [
   {
     id: 'asumi',
     name: 'ASUMI',
-    title: 'リーチ',
+    title: '服飾人',
     image: 'char_asumi',
     imagePath: 'assets/image/char_asumi.png',
     ss: 'fighter_ss',
     color: '#9b59d0',
     stats: { speed: 4.0, jump: -14.2, hp: 96 },
     moves: {
-      kick: { boxW: 84, boxX: 72, damage: 13 },
-      low_kick: { boxW: 90, boxX: 74, damage: 14 },
+      kick: { boxW: 84, boxX: 72, damage: 11 },
+      kick_heavy: { boxW: 92, boxX: 78, damage: 17 },
+      low_kick: { boxW: 88, boxX: 72, damage: 10 },
+      low_kick_heavy: { boxW: 98, boxX: 80, damage: 16 },
     },
   },
   {
     id: 'bunbun',
     name: 'BUNBUN',
-    title: 'ジャンパー',
+    title: '二刀流',
     image: 'char_bunbun',
     imagePath: 'assets/image/char_bunbun.png',
     ss: 'fighter_ss',
@@ -44,7 +46,7 @@ var CHARACTER_ROSTER = [
   {
     id: 'midare',
     name: 'MIDARE',
-    title: 'スピード',
+    title: 'からあげ',
     image: 'char_midare',
     imagePath: 'assets/image/char_midare.png',
     ss: 'fighter_ss',
@@ -52,13 +54,14 @@ var CHARACTER_ROSTER = [
     stats: { speed: 5.2, jump: -15.2, hp: 88 },
     moves: {
       light: { damage: 7, startup: 4, recovery: 8 },
-      kick: { damage: 11, startup: 7 },
+      kick: { damage: 8, startup: 5 },
+      kick_heavy: { damage: 15, startup: 9 },
     },
   },
   {
     id: 'yasui',
     name: 'YASUI',
-    title: 'タンク',
+    title: '社長',
     image: 'char_yasui',
     imagePath: 'assets/image/char_yasui.png',
     ss: 'fighter_ss',
@@ -66,7 +69,8 @@ var CHARACTER_ROSTER = [
     stats: { speed: 3.2, jump: -13.0, hp: 125 },
     moves: {
       heavy: { damage: 18, startup: 12, knockback: 8.0 },
-      low_kick: { damage: 15, knockback: 6.4 },
+      low_kick: { damage: 10, knockback: 4.2 },
+      low_kick_heavy: { damage: 17, knockback: 7.4 },
     },
   },
 

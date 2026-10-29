@@ -20,10 +20,11 @@ var P1_KEYS = {
   right: 'd',
   up: 'w',
   down: 's',
-  light: 'b',
-  heavy: 'n',
-  kick: 'm',
-  special: 'v',
+  light: 'g',
+  heavy: 'h',
+  kick: 'b',
+  kickHeavy: 'n',
+  special: 'm',
 };
 
 var P2_KEYS = {
@@ -31,10 +32,11 @@ var P2_KEYS = {
   right: 'right',
   up: 'up',
   down: 'down',
-  light: ['i', '1', 'num_1'],
-  heavy: ['o', '2', 'num_2'],
-  kick: ['p', '3', 'num_3'],
-  special: ['k', '4', 'num_4'],
+  light: ['8', 'num_8'],
+  heavy: ['9', 'num_9'],
+  kick: 'i',
+  kickHeavy: 'o',
+  special: 'p',
 };
 
 phina.main(function () {

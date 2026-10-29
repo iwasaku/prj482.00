@@ -1,4 +1,4 @@
-const CACHE_NAME = '482-fighter-v6';
+const CACHE_NAME = '482-fighter-v9';
 
 const PRECACHE = [
   './',

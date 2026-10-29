@@ -22,9 +22,15 @@ var MOVES = {
   },
   kick: {
     anim: 'attack_kick',
-    damage: 12, startup: 8, active: 5, recovery: 14,
-    knockback: 5.2, hitstun: 18,
-    boxW: 70, boxH: 28, boxX: 62, boxY: -42,
+    damage: 9, startup: 6, active: 4, recovery: 12,
+    knockback: 4.0, hitstun: 14,
+    boxW: 64, boxH: 26, boxX: 58, boxY: -42,
+  },
+  kick_heavy: {
+    anim: 'attack_kick',
+    damage: 16, startup: 11, active: 5, recovery: 18,
+    knockback: 6.8, hitstun: 22,
+    boxW: 78, boxH: 32, boxX: 70, boxY: -40,
   },
   low_light: {
     anim: 'attack_low_light',
@@ -35,9 +41,16 @@ var MOVES = {
   },
   low_kick: {
     anim: 'attack_low_kick',
-    damage: 13, startup: 9, active: 5, recovery: 16,
-    knockback: 5.8, hitstun: 18,
-    boxW: 78, boxH: 24, boxX: 64, boxY: -18,
+    damage: 8, startup: 6, active: 4, recovery: 12,
+    knockback: 3.6, hitstun: 13,
+    boxW: 66, boxH: 22, boxX: 56, boxY: -18,
+    low: true,
+  },
+  low_kick_heavy: {
+    anim: 'attack_low_kick',
+    damage: 15, startup: 11, active: 5, recovery: 18,
+    knockback: 6.6, hitstun: 20,
+    boxW: 86, boxH: 26, boxX: 72, boxY: -18,
     low: true,
   },
   hadou: {
@@ -357,7 +370,8 @@ phina.define('Fighter', {
   startMove: function (kind, fromCommand) {
     if (!fromCommand) {
       if (this.crouching && kind === 'light') kind = 'low_light';
-      else if (this.crouching && (kind === 'kick' || kind === 'heavy')) kind = 'low_kick';
+      else if (this.crouching && kind === 'kick') kind = 'low_kick';
+      else if (this.crouching && (kind === 'kick_heavy' || kind === 'heavy')) kind = 'low_kick_heavy';
     }
     var data = this.moves[kind];
     if (!data || !this.canAct()) return;
@@ -605,6 +619,7 @@ phina.define('Fighter', {
     var light = this.cpu ? !!this.cpuLight : (this._justPressed(kb, this.keys.light) || GamepadHub.down(this.padIndex, 'light'));
     var heavy = this.cpu ? !!this.cpuHeavy : (this._justPressed(kb, this.keys.heavy) || GamepadHub.down(this.padIndex, 'heavy'));
     var kick = this.cpu ? !!this.cpuKick : (this._justPressed(kb, this.keys.kick) || GamepadHub.down(this.padIndex, 'kick'));
+    var kickHeavy = this.cpu ? !!this.cpuKickHeavy : (this._justPressed(kb, this.keys.kickHeavy) || GamepadHub.down(this.padIndex, 'kickHeavy'));
     var special = this.cpu ? !!this.cpuSpecial : (this._justPressed(kb, this.keys.special) || GamepadHub.down(this.padIndex, 'special'));
     var lightHeld = this.cpu ? !!this.cpuLightHeld : (this._pressed(kb, this.keys.light) || GamepadHub.held(this.padIndex, 'light'));
     var heavyHeld = this.cpu ? !!this.cpuHeavyHeld : (this._pressed(kb, this.keys.heavy) || GamepadHub.held(this.padIndex, 'heavy'));
@@ -625,6 +640,8 @@ phina.define('Fighter', {
         this.startMove('heavy');
       } else if (kick) {
         this.startMove('kick');
+      } else if (kickHeavy) {
+        this.startMove('kick_heavy');
       }
     }
 
