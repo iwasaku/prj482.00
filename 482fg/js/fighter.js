@@ -39,6 +39,13 @@ var MOVES = {
     boxW: 56, boxH: 22, boxX: 50, boxY: -22,
     low: true,
   },
+  low_heavy: {
+    anim: 'attack_low_heavy',
+    damage: 14, startup: 10, active: 5, recovery: 17,
+    knockback: 5.8, hitstun: 19,
+    boxW: 72, boxH: 24, boxX: 62, boxY: -22,
+    low: true,
+  },
   low_kick: {
     anim: 'attack_low_kick',
     damage: 8, startup: 6, active: 4, recovery: 12,
@@ -47,7 +54,7 @@ var MOVES = {
     low: true,
   },
   low_kick_heavy: {
-    anim: 'attack_low_kick',
+    anim: 'attack_low_kick_heavy',
     damage: 15, startup: 11, active: 5, recovery: 18,
     knockback: 6.6, hitstun: 20,
     boxW: 86, boxH: 26, boxX: 72, boxY: -18,
@@ -387,8 +394,9 @@ phina.define('Fighter', {
   startMove: function (kind, fromCommand) {
     if (!fromCommand) {
       if (this.crouching && kind === 'light') kind = 'low_light';
+      else if (this.crouching && kind === 'heavy') kind = 'low_heavy';
       else if (this.crouching && kind === 'kick') kind = 'low_kick';
-      else if (this.crouching && (kind === 'kick_heavy' || kind === 'heavy')) kind = 'low_kick_heavy';
+      else if (this.crouching && kind === 'kick_heavy') kind = 'low_kick_heavy';
     }
     var data = this.moves[kind];
     if (!data || !this.canAct()) return;
