@@ -3,18 +3,16 @@
     "width": 128,
     "height": 128,
     "cols": 8,
-    "rows": 6
+    "rows": 8
   },
   "animations": {
     "idle": {
       "frames": [
-        0,
         1,
-        2,
         3
       ],
       "next": "idle",
-      "frequency": 10
+      "frequency": 20
     },
     "crouch": {
       "frames": [
@@ -130,11 +128,25 @@
       "next": "idle",
       "frequency": 5
     },
+    "attack_kick_heavy": {
+      "frames": [
+        48,
+        49,
+        50,
+        50,
+        51,
+        52
+      ],
+      "next": "idle",
+      "frequency": 5
+    },
     "attack_hadou": {
       "frames": [
-        32,
-        26,
-        27
+        56,
+        57,
+        58,
+        59,
+        60
       ],
       "next": "idle",
       "frequency": 5
@@ -181,6 +193,14 @@
         43
       ],
       "frequency": 8
+    },
+    "win": {
+      "frames": [
+        37,
+        38
+      ],
+      "next": "win",
+      "frequency": 30
     }
   }
 }

@@ -44,7 +44,7 @@ phina.define('HadouShot', {
   superClass: 'Sprite',
 
   init: function(owner, move) {
-    this.superInit('hadou');
+    this.superInit(owner.hadouImage || 'hadou');
     this.owner = owner;
     this.move = move;
     this.facing = owner.facing;

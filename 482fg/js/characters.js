@@ -15,6 +15,8 @@ var CHARACTER_ROSTER = [
     imagePath: 'assets/image/char_murata.png',
     ss: 'fighter_ss',
     color: '#3dcc66',
+    hadou: 'hadou_murata',
+    hadouPath: 'assets/image/hadou_murata.png',
     stats: { speed: 4.2, jump: -14.5, hp: 100 },
   },
   {
@@ -25,6 +27,8 @@ var CHARACTER_ROSTER = [
     imagePath: 'assets/image/char_asumi.png',
     ss: 'fighter_ss',
     color: '#9b59d0',
+    hadou: 'hadou_asumi',
+    hadouPath: 'assets/image/hadou_asumi.png',
     stats: { speed: 4.0, jump: -14.2, hp: 96 },
     moves: {
       kick: { boxW: 84, boxX: 72, damage: 11 },
@@ -41,6 +45,8 @@ var CHARACTER_ROSTER = [
     imagePath: 'assets/image/char_bunbun.png',
     ss: 'fighter_ss',
     color: '#ff8a3a',
+    hadou: 'hadou_bunbun',
+    hadouPath: 'assets/image/hadou_bunbun.png',
     stats: { speed: 4.4, jump: -17.0, hp: 92 },
   },
   {
@@ -51,6 +57,8 @@ var CHARACTER_ROSTER = [
     imagePath: 'assets/image/char_midare.png',
     ss: 'fighter_ss',
     color: '#e45ab8',
+    hadou: 'hadou_midare',
+    hadouPath: 'assets/image/hadou_midare.png',
     stats: { speed: 5.2, jump: -15.2, hp: 88 },
     moves: {
       light: { damage: 7, startup: 4, recovery: 8 },
@@ -66,6 +74,8 @@ var CHARACTER_ROSTER = [
     imagePath: 'assets/image/char_yasui.png',
     ss: 'fighter_ss',
     color: '#3aa0ff',
+    hadou: 'hadou_yasui',
+    hadouPath: 'assets/image/hadou_yasui.png',
     stats: { speed: 3.2, jump: -13.0, hp: 125 },
     moves: {
       heavy: { damage: 18, startup: 12, knockback: 8.0 },
@@ -100,6 +110,9 @@ function collectCharacterAssets(base) {
   assets.sound = assets.sound || {};
   CHARACTER_ROSTER.forEach(function (chara) {
     assets.image[chara.image] = chara.imagePath || ('assets/image/' + chara.image + '.png');
+    if (chara.hadou) {
+      assets.image[chara.hadou] = chara.hadouPath || ('assets/image/' + chara.hadou + '.png');
+    }
     if (chara.ssPath) assets.spritesheet[chara.ss] = chara.ssPath;
   });
   return assets;

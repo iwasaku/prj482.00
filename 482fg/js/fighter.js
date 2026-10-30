@@ -27,7 +27,7 @@ var MOVES = {
     boxW: 64, boxH: 26, boxX: 58, boxY: -42,
   },
   kick_heavy: {
-    anim: 'attack_kick',
+    anim: 'attack_kick_heavy',
     damage: 16, startup: 11, active: 5, recovery: 18,
     knockback: 6.8, hitstun: 22,
     boxW: 78, boxH: 32, boxX: 70, boxY: -40,
@@ -175,6 +175,7 @@ phina.define('Fighter', {
     this.dashTime = 0;
     this.debugHitboxes = options.debugHitboxes !== false;
     this.baseColor = options.color || '#3aa0ff';
+    this.hadouImage = options.hadou || 'hadou';
 
     this.anim = FrameAnimation(this.ssName).attachTo(this);
     this.anim.gotoAndPlay('idle');
@@ -274,6 +275,22 @@ phina.define('Fighter', {
   onadded: function () {
     this.hurtbox.addChildTo(this.parent);
     this.attackBox.addChildTo(this.parent);
+  },
+
+  startWin: function () {
+    this.state = 'win';
+    this.stateTime = 0;
+    this.vx = 0;
+    this.vy = 0;
+    this.onGround = true;
+    this.y = GROUND_Y;
+    this.move = null;
+    this.hasHit = false;
+    this.attackBox.active = false;
+    this.attackBox.visible = false;
+    this.crouching = false;
+    this.holdingDown = false;
+    this.playAnim('win');
   },
 
   playAnim: function (name) {
@@ -566,7 +583,7 @@ phina.define('Fighter', {
   },
 
   _syncAnim: function () {
-    if (this.state === 'attack' || this.state === 'hit' || this.state === 'dead' || this.state === 'throwing' || this.state === 'thrown' || this.state === 'super_cinematic' || this.state === 'super_victim') return;
+    if (this.state === 'attack' || this.state === 'hit' || this.state === 'dead' || this.state === 'win' || this.state === 'throwing' || this.state === 'thrown' || this.state === 'super_cinematic' || this.state === 'super_victim') return;
     var name = 'idle';
     if (!this.onGround) name = this.vy < 0 ? 'jump' : 'fall';
     else if (this.state === 'guard' || this.state === 'blockstun') {
@@ -603,7 +620,7 @@ phina.define('Fighter', {
     this.holdingDown = !!(down && this.onGround);
     this.holdingBack = !!(this.onGround && ((this.facing > 0 && left && !right) || (this.facing < 0 && right && !left)));
     this.inputClock += 1;
-    if (this.onGround && !this.holdingDown && this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'blockstun' && this.state !== 'attack') {
+    if (this.onGround && !this.holdingDown && this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'win' && this.state !== 'blockstun' && this.state !== 'attack') {
       if (fwdNow && !this.prevFwd) {
         if (this.inputClock - this.lastFwdTap <= DASH_WINDOW) this.startDash(this.facing);
         this.lastFwdTap = this.inputClock;
@@ -627,7 +644,7 @@ phina.define('Fighter', {
     var throwIpponInput = fwdNow && ((light && heavyHeld) || (heavy && lightHeld));
     var throwTomoeInput = backNow && ((light && heavyHeld) || (heavy && lightHeld));
 
-    if (this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'blockstun' && this.state !== 'super_cinematic' && this.state !== 'super_victim') {
+    if (this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'win' && this.state !== 'blockstun' && this.state !== 'super_cinematic' && this.state !== 'super_victim') {
       if (throwIpponInput) {
         this.startMove('throw_ippon');
       } else if (throwTomoeInput) {
@@ -705,6 +722,11 @@ phina.define('Fighter', {
         this.state = 'idle';
         this.vx = 0;
       }
+    } else if (this.state === 'win') {
+      this.vx = 0;
+      this.vy = 0;
+      this.y = GROUND_Y;
+      this.onGround = true;
     } else if (this.state !== 'dead') {
       this.vx = 0;
       if (this.canAct()) {

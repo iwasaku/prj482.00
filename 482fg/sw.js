@@ -1,4 +1,4 @@
-const CACHE_NAME = '482-fighter-v9';
+const CACHE_NAME = '482-fighter-v11';
 
 const PRECACHE = [
   './',
@@ -17,6 +17,11 @@ const PRECACHE = [
   './assets/spritesheet/fighter.json',
   './assets/spritesheet/hadou.json',
   './assets/image/hadou.png',
+  './assets/image/hadou_murata.png',
+  './assets/image/hadou_asumi.png',
+  './assets/image/hadou_bunbun.png',
+  './assets/image/hadou_midare.png',
+  './assets/image/hadou_yasui.png',
   './favicon/android-chrome-192x192.png',
   './favicon/android-chrome-512x512.png',
   './favicon/apple-touch-icon.png',

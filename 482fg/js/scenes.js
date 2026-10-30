@@ -150,6 +150,7 @@ phina.define('VersusScene', {
       image: p1Data.image,
       ss: p1Data.ss,
       color: p1Data.color,
+      hadou: p1Data.hadou,
       speed: p1Data.stats.speed,
       jump: p1Data.stats.jump,
       hp: p1Data.stats.hp,
@@ -166,6 +167,7 @@ phina.define('VersusScene', {
       image: p2Data.image,
       ss: p2Data.ss,
       color: p2Data.color,
+      hadou: p2Data.hadou,
       speed: p2Data.stats.speed,
       jump: p2Data.stats.jump,
       hp: p2Data.stats.hp,
@@ -627,6 +629,8 @@ phina.define('VersusScene', {
     else if (roundWinner === 'DRAW') this.koLabel.text = 'DRAW';
     else this.koLabel.text = 'K.O.';
     this.finishWait = 90;
+    if (roundWinner === '1P') this.p1.startWin();
+    else if (roundWinner === '2P') this.p2.startWin();
     if (timedOut) SoundFx.play('timeover');
     else if (roundWinner === 'DRAW') SoundFx.play('draw');
     else SoundFx.play('ko');
