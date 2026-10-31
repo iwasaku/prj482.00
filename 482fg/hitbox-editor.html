@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Hitbox Editor - 482 Fighter</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #1a1a1a; color: #eee; margin: 0; padding: 12px; }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .panel { background: #252525; padding: 10px; border-radius: 6px; }
+  canvas { background: #333; image-rendering: pixelated; border: 1px solid #555; }
+  label { display: block; font-size: 12px; margin: 4px 0 2px; color: #aaa; }
+  input[type="number"], select { width: 80px; background: #111; color: #fff; border: 1px solid #444; padding: 2px 4px; }
+  button { background: #3a7; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+  button:hover { background: #4b8; }
+  #out { width: 100%; height: 160px; background: #111; color: #9f9; font-family: monospace; font-size: 12px; }
+  .frames { display: flex; flex-wrap: wrap; gap: 4px; max-height: 120px; overflow: auto; }
+  .frames button { padding: 2px 6px; font-size: 11px; background: #444; }
+  .frames button.active { background: #3a7; }
+  small { color: #888; }
+</style>
+</head>
+<body>
+<h1>Hitbox Editor（スプライトから判定自動生成）</h1>
+<div class="row">
+  <div class="panel">
+    <label>キャラ画像 (char_*.png)</label>
+    <input type="file" id="imgFile" accept="image/png">
+    <label>スプライトシート JSON（任意）</label>
+    <input type="file" id="jsonFile" accept=".json">
+    <div style="margin-top:8px">
+      <button id="btnAuto">自動生成</button>
+      <button id="btnExport">エクスポート</button>
+    </div>
+    <label>アニメ / フレーム</label>
+    <select id="animSel"></select>
+    <div class="frames" id="frameBtns"></div>
+    <label>表示スケール</label>
+    <input type="range" id="scale" min="1" max="4" value="2" step="0.5">
+    <label><input type="checkbox" id="loopPlay"> アニメーションループ再生</label>
+    <label>再生速度(ms) <input type="number" id="playSpeed" value="120" min="30" max="500"></label>
+  </div>
+  <div class="panel">
+    <canvas id="view" width="256" height="256"></canvas>
+    <div id="info" style="font-size:12px;margin-top:4px;color:#aaa"></div>
+  </div>
+  <div class="panel" style="flex:1">
+    <div id="hurtControls">
+      <strong>Hurtbox（立ち）</strong>
+      <label>幅 <input type="number" id="hw" value="44"></label>
+      <label>高さ <input type="number" id="hh" value="100"></label>
+      <label>ox <input type="number" id="hox" value="0"></label>
+      <label>oy <input type="number" id="hoy" value="0"></label>
+      <strong style="display:block;margin-top:8px">Hurtbox（しゃがみ）</strong>
+      <label>高さ <input type="number" id="chh" value="58"></label>
+    </div>
+    <div id="atkControls" style="margin-top:12px">
+      <strong>AttackBox</strong>
+      <label>技
+        <select id="moveSel">
+          <option value="light">light</option>
+          <option value="heavy">heavy</option>
+          <option value="kick">kick</option>
+          <option value="kick_heavy">kick_heavy</option>
+          <option value="low_light">low_light</option>
+          <option value="low_heavy">low_heavy</option>
+          <option value="low_kick">low_kick</option>
+          <option value="low_kick_heavy">low_kick_heavy</option>
+        </select>
+      </label>
+      <label>boxW <input type="number" id="aw" value="52"></label>
+      <label>boxH <input type="number" id="ah" value="28"></label>
+      <label>boxX <input type="number" id="ax" value="58"></label>
+      <label>boxY <input type="number" id="ay" value="-70"></label>
+      <label>startup <input type="number" id="startup" value="5" min="0"></label>
+      <label>active <input type="number" id="active" value="4" min="1"></label>
+    </div>
+    <label style="margin-top:8px">出力（characters.js の moves 用）</label>
+    <textarea id="out"></textarea>
+  </div>
+</div>
+<script>
+const COLS = 8, ROWS = 8, FW = 128, FH = 128;
+const ORIGIN_X = 64; // feet center in frame
+const ORIGIN_Y = 128;
+
+const ANIM_TO_MOVE = {
+  attack_light: 'light',
+  attack_heavy: 'heavy',
+  attack_kick: 'kick',
+  attack_kick_heavy: 'kick_heavy',
+  attack_low_light: 'low_light',
+  attack_low_heavy: 'low_heavy',
+  attack_low_kick: 'low_kick',
+  attack_low_kick_heavy: 'low_kick_heavy',
+};
+
+let img = null;
+let ss = null;
+let frameCache = {}; // frameIdx -> ImageData or canvas
+let currentFrame = 1;
+let scale = 2;
+let animFrames = [1];
+let playTimer = null;
+let playIndex = 0;
+
+const VIEW_PAD_RIGHT = 80; // extra pixels on the right for attack boxes
+
+const $ = id => document.getElementById(id);
+const view = $('view');
+const ctx = view.getContext('2d');
+
+function loadImage(file) {
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.src = r.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+$('imgFile').onchange = async e => {
+  if (!e.target.files[0]) return;
+  img = await loadImage(e.target.files[0]);
+  frameCache = {};
+  buildAnimList();
+  draw();
+};
+
+$('jsonFile').onchange = e => {
+  if (!e.target.files[0]) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try { ss = JSON.parse(r.result); buildAnimList(); } catch (err) { alert('JSON parse error'); }
+  };
+  r.readAsText(e.target.files[0]);
+};
+
+function buildAnimList() {
+  const sel = $('animSel');
+  sel.innerHTML = '';
+  const anims = ss ? Object.keys(ss.animations) : ['idle', 'crouch', 'attack_light', 'attack_heavy', 'attack_kick', 'attack_kick_heavy', 'attack_low_light', 'attack_low_heavy', 'attack_low_kick', 'attack_low_kick_heavy'];
+  anims.forEach(name => {
+    const o = document.createElement('option');
+    o.value = name;
+    o.textContent = name;
+    sel.appendChild(o);
+  });
+  sel.onchange = () => showAnimFrames(sel.value);
+  if (anims.length) showAnimFrames(anims[0]);
+}
+
+function showAnimFrames(name) {
+  const box = $('frameBtns');
+  box.innerHTML = '';
+  let frames = [1];
+  if (ss && ss.animations[name]) frames = ss.animations[name].frames.slice();
+  else if (name === 'idle') frames = [1, 3];
+  else if (name === 'crouch') frames = [4, 5];
+  animFrames = frames;
+  frames.forEach(f => {
+    const b = document.createElement('button');
+    b.textContent = f;
+    b.onclick = () => { stopPlay(); currentFrame = f; draw(); };
+    box.appendChild(b);
+  });
+  currentFrame = frames[0];
+  playIndex = 0;
+  draw();
+}
+
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+}
+
+function startPlay() {
+  stopPlay();
+  if (!$('loopPlay').checked || animFrames.length <= 1) return;
+  const speed = Math.max(30, +$('playSpeed').value || 120);
+  playTimer = setInterval(() => {
+    playIndex = (playIndex + 1) % animFrames.length;
+    currentFrame = animFrames[playIndex];
+    draw();
+  }, speed);
+}
+
+$('loopPlay').onchange = () => {
+  if ($('loopPlay').checked) startPlay();
+  else stopPlay();
+};
+$('playSpeed').onchange = () => {
+  if ($('loopPlay').checked) startPlay();
+};
+
+function getFrameCanvas(idx) {
+  if (frameCache[idx]) return frameCache[idx];
+  if (!img) return null;
+  const c = document.createElement('canvas');
+  c.width = FW; c.height = FH;
+  const g = c.getContext('2d');
+  const col = idx % COLS;
+  const row = Math.floor(idx / COLS);
+  g.drawImage(img, col * FW, row * FH, FW, FH, 0, 0, FW, FH);
+  frameCache[idx] = c;
+  return c;
+}
+
+function alphaBBox(idx) {
+  const c = getFrameCanvas(idx);
+  if (!c) return null;
+  const g = c.getContext('2d');
+  const data = g.getImageData(0, 0, FW, FH).data;
+  let minx = FW, miny = FH, maxx = -1, maxy = -1;
+  for (let y = 0; y < FH; y++) {
+    for (let x = 0; x < FW; x++) {
+      const a = data[(y * FW + x) * 4 + 3];
+      if (a > 30) {
+        if (x < minx) minx = x;
+        if (y < miny) miny = y;
+        if (x > maxx) maxx = x;
+        if (y > maxy) maxy = y;
+      }
+    }
+  }
+  if (maxx < 0) return null;
+  return { left: minx, top: miny, right: maxx, bottom: maxy, w: maxx - minx + 1, h: maxy - miny + 1, cx: (minx + maxx) / 2, cy: (miny + maxy) / 2 };
+}
+
+function draw() {
+  if (!img) return;
+  const s = +$('scale').value;
+  const viewW = (FW + VIEW_PAD_RIGHT) * s;
+  const viewH = FH * s;
+  view.width = viewW;
+  view.height = viewH;
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, view.width, view.height);
+
+  const fc = getFrameCanvas(currentFrame);
+  if (fc) ctx.drawImage(fc, 0, 0, FW * s, FH * s);
+
+  // origin marker
+  const ox = ORIGIN_X * s, oy = ORIGIN_Y * s;
+  ctx.strokeStyle = '#0f0';
+  ctx.beginPath(); ctx.moveTo(ox - 6, oy); ctx.lineTo(ox + 6, oy); ctx.moveTo(ox, oy - 6); ctx.lineTo(ox, oy + 6); ctx.stroke();
+
+  // hurtbox (standing)
+  const hw = +$('hw').value, hh = +$('hh').value, hox = +$('hox').value, hoy = +$('hoy').value;
+  ctx.strokeStyle = '#48f';
+  ctx.lineWidth = 1;
+  const hx = (ORIGIN_X + hox) * s;
+  const hy = (ORIGIN_Y + hoy) * s;
+  ctx.strokeRect(hx - hw * s / 2, hy - hh * s, hw * s, hh * s);
+
+  // crouch hurtbox (dim)
+  const chh = +$('chh').value;
+  ctx.strokeStyle = 'rgba(80,160,255,0.4)';
+  ctx.strokeRect(hx - hw * s / 2, hy - chh * s, hw * s, chh * s);
+
+  // attack box (can extend right)
+  const aw = +$('aw').value, ah = +$('ah').value, ax = +$('ax').value, ay = +$('ay').value;
+  ctx.strokeStyle = '#f44';
+  const atx = (ORIGIN_X + ax) * s;
+  const aty = (ORIGIN_Y + ay) * s;
+  ctx.strokeRect(atx - aw * s / 2, aty - ah * s, aw * s, ah * s);
+
+  const bb = alphaBBox(currentFrame);
+  const su = +$('startup').value, ac = +$('active').value;
+  $('info').textContent = (bb ? `frame ${currentFrame}  alpha bbox: ${bb.w}x${bb.h} @(${bb.cx.toFixed(0)},${bb.cy.toFixed(0)})  ` : '') +
+    `startup:${su} active:${ac}`;
+}
+
+$('scale').oninput = draw;
+['hw','hh','hox','hoy','chh','aw','ah','ax','ay','startup','active'].forEach(id => $(id).oninput = draw);
+
+$('moveSel').onchange = () => {
+  // keep current numbers; user can auto or edit
+  draw();
+};
+
+$('btnAuto').onclick = () => {
+  if (!img) return alert('画像を読み込んでください');
+  // hurtbox from idle frames
+  const idleFrames = ss && ss.animations.idle ? ss.animations.idle.frames : [1, 3];
+  let maxH = 0, sumW = 0, sumOx = 0, n = 0;
+  idleFrames.forEach(f => {
+    const b = alphaBBox(f);
+    if (!b) return;
+    const h = ORIGIN_Y - b.top;
+    if (h > maxH) maxH = h;
+    sumW += b.w * 0.75; // shrink a bit (exclude arms)
+    sumOx += (b.cx - ORIGIN_X);
+    n++;
+  });
+  if (n) {
+    $('hw').value = Math.round(sumW / n);
+    $('hh').value = Math.round(maxH);
+    $('hox').value = Math.round(sumOx / n);
+    $('hoy').value = 0;
+  }
+  // crouch
+  const crouchFrames = ss && ss.animations.crouch ? ss.animations.crouch.frames : [4, 5];
+  let cMaxH = 0;
+  crouchFrames.forEach(f => {
+    const b = alphaBBox(f);
+    if (b) {
+      const h = ORIGIN_Y - b.top;
+      if (h > cMaxH) cMaxH = h;
+    }
+  });
+  if (cMaxH) $('chh').value = Math.round(cMaxH);
+
+  // attack from current anim if it maps
+  const anim = $('animSel').value;
+  const move = ANIM_TO_MOVE[anim];
+  if (move) {
+    $('moveSel').value = move;
+    const frames = ss && ss.animations[anim] ? ss.animations[anim].frames : [];
+    if (frames.length) {
+      // use the most extended frame (largest right)
+      let best = null;
+      frames.forEach(f => {
+        const b = alphaBBox(f);
+        if (!b) return;
+        if (!best || b.right > best.right) best = b;
+      });
+      if (best) {
+        // rough attack box: from body center to the extended tip
+        const tip = best.right;
+        const bodyRight = ORIGIN_X + 20; // approximate body edge
+        const w = Math.max(20, tip - bodyRight);
+        const h = Math.min(40, best.h * 0.4);
+        const ox = bodyRight - ORIGIN_X + w / 2;
+        const oy = -(ORIGIN_Y - best.cy); // relative to feet, negative is up
+        $('aw').value = Math.round(w);
+        $('ah').value = Math.round(Math.max(16, h));
+        $('ax').value = Math.round(ox);
+        $('ay').value = Math.round(oy);
+      }
+    }
+  }
+  draw();
+  alert('自動生成しました。数値を調整してエクスポートしてください。');
+};
+
+$('btnExport').onclick = () => {
+  const move = $('moveSel').value;
+  const data = {
+    [move]: {
+      boxW: +$('aw').value,
+      boxH: +$('ah').value,
+      boxX: +$('ax').value,
+      boxY: +$('ay').value,
+      startup: +$('startup').value,
+      active: +$('active').value,
+    }
+  };
+  const hurt = {
+    width: +$('hw').value,
+    height: +$('hh').value,
+    ox: +$('hox').value,
+    oy: +$('hoy').value,
+    crouchHeight: +$('chh').value,
+  };
+  const text = `// moves override\nmoves: ${JSON.stringify(data, null, 2).replace(/"([^"]+)":/g, '$1:')},\n\n// hurtbox (manual apply in Fighter)\n// ${JSON.stringify(hurt)}`;
+  $('out').value = text;
+};
+
+// init
+buildAnimList();
+</script>
+</body>
+</html>

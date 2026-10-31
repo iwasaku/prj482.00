@@ -6,40 +6,74 @@ phina.define('GameTitleScene', {
   init: function (options) {
     this.superInit(options);
     this.backgroundColor = '#151515';
+    this.modeIndex = 0;
+    this.modes = [
+      { label: '1P VS 2P', cpu: false },
+      { label: '1P VS CPU', cpu: true },
+    ];
 
     Label({
       text: '482 FIGHTER(仮)',
       fontSize: 56,
       fill: '#fff',
       fontWeight: 'bold',
-    }).addChildTo(this).setPosition(this.gridX.center(), 140);
+    }).addChildTo(this).setPosition(this.gridX.center(), 100);
 
     Label({
-      text: '',
+      text: 'MODE SELECT',
       fontSize: 20,
       fill: '#aaa',
-    }).addChildTo(this).setPosition(this.gridX.center(), 190);
+    }).addChildTo(this).setPosition(this.gridX.center(), 160);
+
+    this.modeLabels = [];
+    for (var i = 0; i < this.modes.length; i++) {
+      var lb = Label({
+        text: this.modes[i].label,
+        fontSize: 36,
+        fill: '#888',
+        fontWeight: 'bold',
+      }).addChildTo(this).setPosition(this.gridX.center(), 220 + i * 56);
+      this.modeLabels.push(lb);
+    }
 
     Label({
       text: '1P: A/D 移動  W ジャンプ  S しゃがみ  G弱P H強P B弱K N強K M必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  8弱P 9強P I弱K O強K P必殺\nパッド: 十字/スティック 移動  Y弱P  X強P  A弱K  B強K  L1/R1/L2/R2必殺  START決定\n必殺  前+必殺 波動  後+必殺 竜巻  上+必殺 昇龍  下+必殺 超必殺(ゲージ100)\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
-      fontSize: 18,
+      fontSize: 16,
       fill: '#ddd',
       align: 'center',
-    }).addChildTo(this).setPosition(this.gridX.center(), 300);
+    }).addChildTo(this).setPosition(this.gridX.center(), 360);
 
     Label({
-      text: 'SPACE / START でキャラ選択へ',
+      text: '↑↓ で選択   SPACE / START で決定',
       fontSize: 22,
       fill: '#ffe08a',
-    }).addChildTo(this).setPosition(this.gridX.center(), 430);
+    }).addChildTo(this).setPosition(this.gridX.center(), 480);
+
+    this._refreshModes();
+  },
+
+  _refreshModes: function () {
+    for (var i = 0; i < this.modeLabels.length; i++) {
+      var on = i === this.modeIndex;
+      this.modeLabels[i].fill = on ? '#ffe08a' : '#666';
+      this.modeLabels[i].fontSize = on ? 40 : 32;
+    }
   },
 
   update: function (app) {
     GamepadHub.poll();
-    if (app.keyboard.getKeyDown('space') || GamepadHub.startDown()) {
+    var kb = app.keyboard;
+    var up = kb.getKeyDown('up') || kb.getKeyDown('w') || GamepadHub.down(0, 'up');
+    var down = kb.getKeyDown('down') || kb.getKeyDown('s') || GamepadHub.down(0, 'down');
+    if (up || down) {
+      this.modeIndex = (this.modeIndex + (down ? 1 : -1) + this.modes.length) % this.modes.length;
+      SoundFx.play('ui_move');
+      this._refreshModes();
+    }
+    if (kb.getKeyDown('space') || GamepadHub.startDown()) {
       SoundFx.unlock();
       SoundFx.play('ui_ok');
-      this.exit();
+      this.exit({ cpu: this.modes[this.modeIndex].cpu });
     }
   },
 });

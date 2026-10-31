@@ -12,7 +12,7 @@ phina.define('SelectScene', {
     this.p2Index = Math.min(1, this.roster.length - 1);
     this.p1Locked = false;
     this.p2Locked = false;
-    this.cpuMode = false;
+    this.cpuMode = !!(options && options.cpu);
     this.ready = false;
     this.readyWait = 0;
     this.READY_FRAMES = 120;
@@ -25,13 +25,13 @@ phina.define('SelectScene', {
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 36);
 
     Label({
-      text: '1P: A/D  G決定    2P: ←/→  8決定    C で CPU対戦    パッド: Y決定',
+      text: '1P: A/D  G決定    2P: ←/→  8決定    パッド: Y決定',
       fontSize: 14,
       fill: '#aaa',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 68);
 
     this.modeLabel = Label({
-      text: 'VS 2P',
+      text: this.cpuMode ? 'VS CPU' : 'VS 2P',
       fontSize: 16,
       fill: '#ffe08a',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 92);
@@ -212,13 +212,6 @@ phina.define('SelectScene', {
     if (kb.getKeyDown('d') || GamepadHub.down(0, 'right')) this._move(1, 1);
     if (kb.getKeyDown('left') || GamepadHub.down(1, 'left')) this._move(2, -1);
     if (kb.getKeyDown('right') || GamepadHub.down(1, 'right')) this._move(2, 1);
-    if (kb.getKeyDown('c')) {
-      this.cpuMode = !this.cpuMode;
-      this.modeLabel.text = this.cpuMode ? 'VS CPU' : 'VS 2P';
-      if (!this.cpuMode) this.p2Locked = false;
-      SoundFx.play('ui_move');
-      this._refresh();
-    }
     if (kb.getKeyDown('g') || GamepadHub.down(0, 'light')) {
       this.p1Locked = !this.p1Locked;
       if (this.cpuMode) this.p2Locked = this.p1Locked;
