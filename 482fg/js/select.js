@@ -1,5 +1,8 @@
 phina.globalize();
 
+// true: 1Pと2Pが同一キャラを選択できる / false: できない
+var ALLOW_SAME_CHARACTER = true;
+
 phina.define('SelectScene', {
   superClass: 'DisplayScene',
 
@@ -70,6 +73,23 @@ phina.define('SelectScene', {
         fontSize: 12,
         fill: '#fff',
       }).addChildTo(card).setPosition(0, 52);
+      var hw = 60, hh = 74, sw = 4;
+      var mk = function (w, h, fill, x, y) {
+        return RectangleShape({
+          width: w,
+          height: h,
+          fill: fill,
+          stroke: null,
+        }).addChildTo(card).setPosition(x, y).hide();
+      };
+      card.splitBorders = [
+        mk(sw, 148, '#3aa0ff', -hw + sw / 2, 0),
+        mk(sw, 148, '#ff8a3a', hw - sw / 2, 0),
+        mk(hw, sw, '#3aa0ff', -hw / 2, -hh + sw / 2),
+        mk(hw, sw, '#ff8a3a', hw / 2, -hh + sw / 2),
+        mk(hw, sw, '#3aa0ff', -hw / 2, hh - sw / 2),
+        mk(hw, sw, '#ff8a3a', hw / 2, hh - sw / 2),
+      ];
       card.charaIndex = i;
       this.cards.push(card);
     }
@@ -118,9 +138,9 @@ phina.define('SelectScene', {
     return wrap;
   },
 
-  _setPreview: function (wrap, chara) {
+  _setPreview: function (wrap, chara, imageName) {
     if (wrap.sprite) wrap.sprite.remove();
-    var sprite = Sprite(chara.image).addChildTo(wrap);
+    var sprite = Sprite(imageName || chara.image).addChildTo(wrap);
     sprite.origin.set(0.5, 1);
     sprite.scaleX = wrap.facing;
     sprite.anim = FrameAnimation(chara.ss).attachTo(sprite);
@@ -132,7 +152,7 @@ phina.define('SelectScene', {
     var p1 = this.roster[this.p1Index];
     var p2 = this.roster[this.p2Index];
     this._setPreview(this.p1Preview, p1);
-    this._setPreview(this.p2Preview, p2);
+    this._setPreview(this.p2Preview, p2, p2.image2p);
     this.p1Name.text = '1P  ' + p1.name + (this.p1Locked ? '  OK' : '');
     this.p2Name.text = (this.cpuMode ? 'CPU  ' : '2P  ') + p2.name + (this.p2Locked ? '  OK' : '');
     this.p1Name.fill = p1.color;
@@ -144,13 +164,20 @@ phina.define('SelectScene', {
       var card = this.cards[i];
       var isP1 = i === this.p1Index;
       var isP2 = i === this.p2Index;
-      if (isP1) {
+      if (isP1 && isP2) {
+        card.stroke = null;
+        card.strokeWidth = 0;
+        for (var b = 0; b < card.splitBorders.length; b++) card.splitBorders[b].show();
+      } else if (isP1) {
+        for (var b = 0; b < card.splitBorders.length; b++) card.splitBorders[b].hide();
         card.stroke = '#3aa0ff';
         card.strokeWidth = 4;
       } else if (isP2) {
+        for (var b = 0; b < card.splitBorders.length; b++) card.splitBorders[b].hide();
         card.stroke = '#ff8a3a';
         card.strokeWidth = 4;
       } else {
+        for (var b = 0; b < card.splitBorders.length; b++) card.splitBorders[b].hide();
         card.stroke = '#555';
         card.strokeWidth = 2;
       }
@@ -163,7 +190,7 @@ phina.define('SelectScene', {
 
   _beginReady: function () {
     if (this.ready) return;
-    if (this.p1Index === this.p2Index) return;
+    if (!ALLOW_SAME_CHARACTER && this.p1Index === this.p2Index) return;
     this.ready = true;
     this.readyWait = this.READY_FRAMES;
     var p1 = this.roster[this.p1Index];
@@ -177,12 +204,13 @@ phina.define('SelectScene', {
     if (player === 1 && this.p1Locked) return;
     if (player === 2 && this.p2Locked) return;
     var n = this.roster.length;
-    if (n < 2) return;
+    if (n < 1) return;
+    if (n < 2 && !ALLOW_SAME_CHARACTER) return;
     var other = player === 1 ? this.p2Index : this.p1Index;
     var next = player === 1 ? this.p1Index : this.p2Index;
     for (var i = 0; i < n; i++) {
       next = (next + dir + n) % n;
-      if (next !== other) break;
+      if (ALLOW_SAME_CHARACTER || next !== other) break;
     }
     if (player === 1) this.p1Index = next;
     else this.p2Index = next;
@@ -191,7 +219,7 @@ phina.define('SelectScene', {
   },
 
   _start: function () {
-    if (this.p1Index === this.p2Index) return;
+    if (!ALLOW_SAME_CHARACTER && this.p1Index === this.p2Index) return;
     this.exit({
       p1Id: this.roster[this.p1Index].id,
       p2Id: this.roster[this.p2Index].id,

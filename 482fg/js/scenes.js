@@ -198,7 +198,7 @@ phina.define('VersusScene', {
       padIndex: 1,
       cpu: this.cpuMode,
       facing: -1,
-      image: p2Data.image,
+      image: p2Data.image2p || p2Data.image,
       ss: p2Data.ss,
       color: p2Data.color,
       hadou: p2Data.hadou,

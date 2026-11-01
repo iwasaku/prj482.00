@@ -3,6 +3,7 @@ phina.globalize();
 /*
  * キャラ追加手順
  * 1. assets/image/ にスプライトシートを置く（今は 128x128 / 8列 x 6行）
+ *    2P用は char_<id>_2p.png も置く
  * 2. 下の CHARACTER_ROSTER に1件追加する
  * 3. シートの切り方が違う場合だけ spritesheet JSON を増やし、ss / ssPath を指定
  */
@@ -13,6 +14,8 @@ var CHARACTER_ROSTER = [
     title: 'ヒーロー',
     image: 'char_murata',
     imagePath: 'assets/image/char_murata.png',
+    image2p: 'char_murata_2p',
+    imagePath2p: 'assets/image/char_murata_2p.png',
     ss: 'fighter_ss',
     color: '#3dcc66',
     hadou: 'hadou_murata',
@@ -25,6 +28,8 @@ var CHARACTER_ROSTER = [
     title: '服飾人',
     image: 'char_asumi',
     imagePath: 'assets/image/char_asumi.png',
+    image2p: 'char_asumi_2p',
+    imagePath2p: 'assets/image/char_asumi_2p.png',
     ss: 'fighter_ss',
     color: '#9b59d0',
     hadou: 'hadou_asumi',
@@ -43,6 +48,8 @@ var CHARACTER_ROSTER = [
     title: '二刀流',
     image: 'char_bunbun',
     imagePath: 'assets/image/char_bunbun.png',
+    image2p: 'char_bunbun_2p',
+    imagePath2p: 'assets/image/char_bunbun_2p.png',
     ss: 'fighter_ss',
     color: '#ff8a3a',
     hadou: 'hadou_bunbun',
@@ -55,6 +62,8 @@ var CHARACTER_ROSTER = [
     title: 'からあげ',
     image: 'char_midare',
     imagePath: 'assets/image/char_midare.png',
+    image2p: 'char_midare_2p',
+    imagePath2p: 'assets/image/char_midare_2p.png',
     ss: 'fighter_ss',
     color: '#e45ab8',
     hadou: 'hadou_midare',
@@ -72,6 +81,8 @@ var CHARACTER_ROSTER = [
     title: '社長',
     image: 'char_yasui',
     imagePath: 'assets/image/char_yasui.png',
+    image2p: 'char_yasui_2p',
+    imagePath2p: 'assets/image/char_yasui_2p.png',
     ss: 'fighter_ss',
     color: '#3aa0ff',
     hadou: 'hadou_yasui',
@@ -110,6 +121,10 @@ function collectCharacterAssets(base) {
   assets.sound = assets.sound || {};
   CHARACTER_ROSTER.forEach(function (chara) {
     assets.image[chara.image] = chara.imagePath || ('assets/image/' + chara.image + '.png');
+    var img2p = chara.image2p || (chara.image + '_2p');
+    var path2p = chara.imagePath2p || (chara.imagePath || ('assets/image/' + chara.image + '.png')).replace('.png', '_2p.png');
+    assets.image[img2p] = path2p;
+    chara.image2p = img2p;
     if (chara.hadou) {
       assets.image[chara.hadou] = chara.hadouPath || ('assets/image/' + chara.hadou + '.png');
     }
