@@ -48,9 +48,10 @@ phina.main(function () {
     assets: ASSETS,
     scenes: [
       { className: 'GameTitleScene', label: 'title', nextLabel: 'select' },
+      { className: 'OptionScene', label: 'option', nextLabel: 'title' },
       { className: 'SelectScene', label: 'select', nextLabel: 'versus' },
       { className: 'VersusScene', label: 'versus', nextLabel: 'result' },
-      { className: 'GameResultScene', label: 'result', nextLabel: 'title' },
+      { className: 'GameResultScene', label: 'result', nextLabel: 'select' },
     ],
   });
   app.on('enterframe', function () {

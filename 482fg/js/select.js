@@ -1,7 +1,32 @@
 phina.globalize();
 
-// true: 1Pと2Pが同一キャラを選択できる / false: できない
-var ALLOW_SAME_CHARACTER = true;
+// 同担拒否: true で同一キャラ選択不可
+var GAME_OPTIONS = {
+  rejectSameCharacter: false,
+};
+
+function loadGameOptions() {
+  try {
+    var raw = localStorage.getItem('fg_options');
+    if (!raw) return;
+    var saved = JSON.parse(raw);
+    if (typeof saved.rejectSameCharacter === 'boolean') {
+      GAME_OPTIONS.rejectSameCharacter = saved.rejectSameCharacter;
+    }
+  } catch (e) {}
+}
+
+function saveGameOptions() {
+  try {
+    localStorage.setItem('fg_options', JSON.stringify(GAME_OPTIONS));
+  } catch (e) {}
+}
+
+loadGameOptions();
+
+function allowSameCharacter() {
+  return !GAME_OPTIONS.rejectSameCharacter;
+}
 
 phina.define('SelectScene', {
   superClass: 'DisplayScene',
@@ -190,7 +215,7 @@ phina.define('SelectScene', {
 
   _beginReady: function () {
     if (this.ready) return;
-    if (!ALLOW_SAME_CHARACTER && this.p1Index === this.p2Index) return;
+    if (!allowSameCharacter() && this.p1Index === this.p2Index) return;
     this.ready = true;
     this.readyWait = this.READY_FRAMES;
     var p1 = this.roster[this.p1Index];
@@ -205,12 +230,12 @@ phina.define('SelectScene', {
     if (player === 2 && this.p2Locked) return;
     var n = this.roster.length;
     if (n < 1) return;
-    if (n < 2 && !ALLOW_SAME_CHARACTER) return;
+    if (n < 2 && !allowSameCharacter()) return;
     var other = player === 1 ? this.p2Index : this.p1Index;
     var next = player === 1 ? this.p1Index : this.p2Index;
     for (var i = 0; i < n; i++) {
       next = (next + dir + n) % n;
-      if (ALLOW_SAME_CHARACTER || next !== other) break;
+      if (allowSameCharacter() || next !== other) break;
     }
     if (player === 1) this.p1Index = next;
     else this.p2Index = next;
@@ -219,7 +244,7 @@ phina.define('SelectScene', {
   },
 
   _start: function () {
-    if (!ALLOW_SAME_CHARACTER && this.p1Index === this.p2Index) return;
+    if (!allowSameCharacter() && this.p1Index === this.p2Index) return;
     this.exit({
       p1Id: this.roster[this.p1Index].id,
       p2Id: this.roster[this.p2Index].id,

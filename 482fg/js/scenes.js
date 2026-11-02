@@ -10,6 +10,7 @@ phina.define('GameTitleScene', {
     this.modes = [
       { label: '1P VS 2P', cpu: false },
       { label: '1P VS CPU', cpu: true },
+      { label: 'OPTION', option: true },
     ];
 
     Label({
@@ -32,16 +33,16 @@ phina.define('GameTitleScene', {
         fontSize: 36,
         fill: '#888',
         fontWeight: 'bold',
-      }).addChildTo(this).setPosition(this.gridX.center(), 220 + i * 56);
+      }).addChildTo(this).setPosition(this.gridX.center(), 210 + i * 48);
       this.modeLabels.push(lb);
     }
 
     Label({
-      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  G弱P H強P B弱K N強K M必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  8弱P 9強P I弱K O強K P必殺\nパッド: 十字/スティック 移動  Y弱P  X強P  A弱K  B強K  L1/R1/L2/R2必殺  START決定\n必殺  前+必殺 波動  後+必殺 竜巻  上+必殺 昇龍  下+必殺 超必殺(ゲージ100)\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
+      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  G弱P H強P B弱K N強K M必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  8弱P 9強P I弱K O強K P必殺\nパッド: 十字/スティック 移動  Y弱P  X強P  A弱K  B強K  L必殺  START決定\n必殺  前+必殺 波動  後+必殺 竜巻  上+必殺 昇龍  下+必殺 超必殺(ゲージ100)\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
       fontSize: 16,
       fill: '#ddd',
       align: 'center',
-    }).addChildTo(this).setPosition(this.gridX.center(), 360);
+    }).addChildTo(this).setPosition(this.gridX.center(), 390);
 
     Label({
       text: '↑↓ で選択   SPACE / START で決定',
@@ -73,8 +74,214 @@ phina.define('GameTitleScene', {
     if (kb.getKeyDown('space') || GamepadHub.startDown()) {
       SoundFx.unlock();
       SoundFx.play('ui_ok');
-      this.exit({ cpu: this.modes[this.modeIndex].cpu });
+      var mode = this.modes[this.modeIndex];
+      if (mode.option) {
+        this.exit({ nextLabel: 'option' });
+      } else {
+        this.exit({ cpu: !!mode.cpu, nextLabel: 'select' });
+      }
     }
+  },
+});
+
+phina.define('OptionScene', {
+  superClass: 'DisplayScene',
+
+  init: function (options) {
+    this.superInit(options);
+    this.backgroundColor = '#151515';
+    this.mode = 'menu';
+    this.menuIndex = 0;
+    this.playerIndex = 0;
+    this.step = 0;
+
+    this.titleLabel = Label({
+      text: 'OPTION',
+      fontSize: 48,
+      fill: '#fff',
+      fontWeight: 'bold',
+    }).addChildTo(this).setPosition(this.gridX.center(), 80);
+
+    this.menuLabels = [];
+    var items = ['同担拒否', 'ボタン配置', 'タイトルへ戻る'];
+    var itemY = [200, 264, 470];
+    for (var i = 0; i < items.length; i++) {
+      var lb = Label({
+        text: items[i],
+        fontSize: 32,
+        fill: '#fff',
+      }).addChildTo(this).setPosition(this.gridX.center(), itemY[i]);
+      this.menuLabels.push(lb);
+    }
+    this.valueLabel = Label({
+      text: '',
+      fontSize: 32,
+      fill: '#ffe08a',
+      fontWeight: 'bold',
+    }).addChildTo(this).setPosition(this.gridX.center() + 200, 200);
+
+    this.subTitle = Label({
+      text: '',
+      fontSize: 28,
+      fill: '#ffe08a',
+      fontWeight: 'bold',
+    }).addChildTo(this).setPosition(this.gridX.center(), 150);
+    this.subTitle.hide();
+
+    this.roleLabels = [];
+    for (var r = 0; r < PAD_ACTIONS.length; r++) {
+      var role = Label({
+        text: '',
+        fontSize: 26,
+        fill: '#ccc',
+      }).addChildTo(this).setPosition(this.gridX.center(), 210 + r * 40);
+      role.hide();
+      this.roleLabels.push(role);
+    }
+
+    this.prompt = Label({
+      text: '',
+      fontSize: 20,
+      fill: '#aaa',
+    }).addChildTo(this).setPosition(this.gridX.center(), 510);
+
+    this._refresh();
+  },
+
+  _refresh: function () {
+    var menu = this.mode === 'menu';
+    for (var i = 0; i < this.menuLabels.length; i++) {
+      this.menuLabels[i].visible = menu;
+      var on = menu && i === this.menuIndex;
+      this.menuLabels[i].fill = on ? '#ffe08a' : '#888';
+      this.menuLabels[i].fontSize = on ? 36 : 30;
+    }
+    this.valueLabel.visible = menu && this.menuIndex === 0;
+    if (menu) {
+      this.titleLabel.text = 'OPTION';
+      this.valueLabel.text = GAME_OPTIONS.rejectSameCharacter ? 'ON' : 'OFF';
+      this.valueLabel.fill = GAME_OPTIONS.rejectSameCharacter ? '#ff8a3a' : '#3aa0ff';
+      this.subTitle.hide();
+      for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
+      this.prompt.text = this.menuIndex === 0
+        ? '←→ で切り替え'
+        : (this.menuIndex === 1
+          ? 'SPACE / START で開始'
+          : 'SPACE / START でタイトルへ');
+    } else if (this.mode === 'player') {
+      this.titleLabel.text = 'ボタン配置';
+      this.valueLabel.visible = false;
+      this.subTitle.show();
+      this.subTitle.text = this.playerIndex === 0 ? '1P' : '2P';
+      this.subTitle.fill = this.playerIndex === 0 ? '#3aa0ff' : '#ff8a3a';
+      for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
+      this.prompt.text = '←→ で選択    SPACE / START で決定    ESC / SELECT で戻る';
+    } else {
+      this.titleLabel.text = (this.playerIndex === 0 ? '1P' : '2P') + ' ボタン配置';
+      this.valueLabel.visible = false;
+      this.subTitle.hide();
+      var bind = this.draft || PAD_BINDINGS[this.playerIndex];
+      for (var r = 0; r < this.roleLabels.length; r++) {
+        var act = PAD_ACTIONS[r];
+        var current = r === this.step;
+        this.roleLabels[r].show();
+        this.roleLabels[r].text = act.label + '    ' + (r < this.step ? padButtonName(bind[act.key]) : (current ? '← ボタンを押す' : ''));
+        this.roleLabels[r].fill = current ? '#ffe08a' : (r < this.step ? '#fff' : '#666');
+        this.roleLabels[r].fontSize = current ? 30 : 24;
+      }
+      this.prompt.text = 'A / B / X / Y / L / R を押す    ESC / SELECT で戻る';
+    }
+  },
+
+  update: function (app) {
+    GamepadHub.poll();
+    var kb = app.keyboard;
+    if (this.mode === 'menu') this._updateMenu(kb);
+    else if (this.mode === 'player') this._updatePlayer(kb);
+    else this._updateAssign(kb);
+  },
+
+  _updateMenu: function (kb) {
+    var up = kb.getKeyDown('up') || kb.getKeyDown('w') || GamepadHub.down(0, 'up');
+    var down = kb.getKeyDown('down') || kb.getKeyDown('s') || GamepadHub.down(0, 'down');
+    if (up || down) {
+      this.menuIndex = (this.menuIndex + (down ? 1 : -1) + 3) % 3;
+      SoundFx.play('ui_move');
+      this._refresh();
+    }
+    if (this.menuIndex === 0) {
+      var left = kb.getKeyDown('left') || kb.getKeyDown('a') || GamepadHub.down(0, 'left');
+      var right = kb.getKeyDown('right') || kb.getKeyDown('d') || GamepadHub.down(0, 'right');
+      if (left || right) {
+        GAME_OPTIONS.rejectSameCharacter = !GAME_OPTIONS.rejectSameCharacter;
+        saveGameOptions();
+        SoundFx.play('ui_move');
+        this._refresh();
+      }
+    }
+    if (kb.getKeyDown('space') || GamepadHub.startDown()) {
+      SoundFx.play('ui_ok');
+      if (this.menuIndex === 1) {
+        this.mode = 'player';
+        this._refresh();
+      } else if (this.menuIndex === 2) {
+        this.exit({ nextLabel: 'title' });
+      }
+    }
+    if (kb.getKeyDown('escape')) {
+      SoundFx.play('ui_ok');
+      this.exit({ nextLabel: 'title' });
+    }
+  },
+
+  _updatePlayer: function (kb) {
+    var left = kb.getKeyDown('left') || kb.getKeyDown('a') || GamepadHub.down(0, 'left');
+    var right = kb.getKeyDown('right') || kb.getKeyDown('d') || GamepadHub.down(0, 'right');
+    if (left || right) {
+      this.playerIndex = this.playerIndex ? 0 : 1;
+      SoundFx.play('ui_move');
+      this._refresh();
+    }
+    if (kb.getKeyDown('space') || GamepadHub.startDown()) {
+      SoundFx.play('ui_ok');
+      this.mode = 'assign';
+      this.step = 0;
+      this.draft = Object.assign({}, PAD_BINDINGS[this.playerIndex]);
+      this._refresh();
+    }
+    if (kb.getKeyDown('escape') || GamepadHub.selectDown()) {
+      SoundFx.play('ui_ok');
+      this.mode = 'menu';
+      this._refresh();
+    }
+  },
+
+  _updateAssign: function (kb) {
+    if (kb.getKeyDown('escape') || GamepadHub.selectDown()) {
+      SoundFx.play('ui_ok');
+      this.draft = null;
+      this.mode = 'menu';
+      this._refresh();
+      return;
+    }
+    var btn = GamepadHub.bindButtonDown(this.playerIndex);
+    if (!btn) return;
+    var act = PAD_ACTIONS[this.step];
+    var bind = this.draft;
+    for (var i = 0; i < PAD_ACTIONS.length; i++) {
+      if (bind[PAD_ACTIONS[i].key] === btn.id) bind[PAD_ACTIONS[i].key] = -1;
+    }
+    bind[act.key] = btn.id;
+    SoundFx.play('ui_ok');
+    this.step += 1;
+    if (this.step >= PAD_ACTIONS.length) {
+      PAD_BINDINGS[this.playerIndex] = this.draft;
+      savePadBindings();
+      this.draft = null;
+      this.mode = 'menu';
+      this.menuIndex = 1;
+    }
+    this._refresh();
   },
 });
 
@@ -708,6 +915,7 @@ phina.define('VersusScene', {
             winner: this.winner,
             p1Wins: this.p1Wins,
             p2Wins: this.p2Wins,
+            cpu: this.cpuMode,
           });
           return;
         }
@@ -772,6 +980,7 @@ phina.define('GameResultScene', {
     var winner = (options && options.winner) || 'DRAW';
     var p1Wins = (options && options.p1Wins) || 0;
     var p2Wins = (options && options.p2Wins) || 0;
+    this.cpuMode = !!(options && options.cpu);
 
     Label({
       text: winner === 'DRAW' ? 'DRAW' : winner + ' WIN',
@@ -787,7 +996,7 @@ phina.define('GameResultScene', {
     }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(0.4));
 
     Label({
-      text: 'SPACE でタイトルへ',
+      text: 'SPACE / START でキャラ選択へ',
       fontSize: 22,
       fill: '#ddd',
     }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(2));
@@ -801,7 +1010,7 @@ phina.define('GameResultScene', {
     GamepadHub.poll();
     if (app.keyboard.getKeyDown('space') || GamepadHub.startDown()) {
       SoundFx.play('ui_ok');
-      this.exit();
+      this.exit({ cpu: this.cpuMode, nextLabel: 'select' });
     }
   },
 });
