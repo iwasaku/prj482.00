@@ -996,7 +996,7 @@ phina.define('GameResultScene', {
     }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(0.4));
 
     Label({
-      text: 'SPACE / START でキャラ選択へ',
+      text: 'SPACE / START でキャラ選択へ\nESC / SELECT でタイトルへ',
       fontSize: 22,
       fill: '#ddd',
     }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(2));
@@ -1011,6 +1011,10 @@ phina.define('GameResultScene', {
     if (app.keyboard.getKeyDown('space') || GamepadHub.startDown()) {
       SoundFx.play('ui_ok');
       this.exit({ cpu: this.cpuMode, nextLabel: 'select' });
+    }
+    if (app.keyboard.getKeyDown('escape') || GamepadHub.selectDown()) {
+      SoundFx.play('ui_ok');
+      this.exit({ nextLabel: 'title' });
     }
   },
 });
