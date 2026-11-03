@@ -1,8 +1,14 @@
 phina.globalize();
 
 // 同担拒否: true で同一キャラ選択不可
+// cpuShuffle: VS CPUの順番をシャッフル
+// survivalMode: VS CPUで体力を引き継ぐ
+// stageFixed: VS CPUのステージを固定
 var GAME_OPTIONS = {
   rejectSameCharacter: false,
+  cpuShuffle: true,
+  survivalMode: false,
+  stageFixed: false,
 };
 
 function loadGameOptions() {
@@ -13,6 +19,9 @@ function loadGameOptions() {
     if (typeof saved.rejectSameCharacter === 'boolean') {
       GAME_OPTIONS.rejectSameCharacter = saved.rejectSameCharacter;
     }
+    if (typeof saved.cpuShuffle === 'boolean') GAME_OPTIONS.cpuShuffle = saved.cpuShuffle;
+    if (typeof saved.survivalMode === 'boolean') GAME_OPTIONS.survivalMode = saved.survivalMode;
+    if (typeof saved.stageFixed === 'boolean') GAME_OPTIONS.stageFixed = saved.stageFixed;
   } catch (e) {}
 }
 
@@ -26,6 +35,24 @@ loadGameOptions();
 
 function allowSameCharacter() {
   return !GAME_OPTIONS.rejectSameCharacter;
+}
+
+function buildCpuQueue(p1Id) {
+  var ids = [];
+  for (var i = 0; i < CHARACTER_ROSTER.length; i++) {
+    var id = CHARACTER_ROSTER[i].id;
+    if (!allowSameCharacter() && id === p1Id) continue;
+    ids.push(id);
+  }
+  if (GAME_OPTIONS.cpuShuffle) {
+    for (var j = ids.length - 1; j > 0; j--) {
+      var k = Math.floor(Math.random() * (j + 1));
+      var tmp = ids[j];
+      ids[j] = ids[k];
+      ids[k] = tmp;
+    }
+  }
+  return ids;
 }
 
 phina.define('SelectScene', {
@@ -53,7 +80,7 @@ phina.define('SelectScene', {
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 36);
 
     Label({
-      text: '1P: A/D  G決定    2P: ←/→  8決定    パッド: Y決定',
+      text: this.cpuMode ? '1P: A/D  G決定    パッド: Y決定' : '1P: A/D  G決定    2P: ←/→  8決定    パッド: Y決定',
       fontSize: 14,
       fill: '#aaa',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 68);
@@ -179,7 +206,7 @@ phina.define('SelectScene', {
     this._setPreview(this.p1Preview, p1);
     this._setPreview(this.p2Preview, p2, p2.image2p);
     this.p1Name.text = '1P  ' + p1.name + (this.p1Locked ? '  OK' : '');
-    this.p2Name.text = (this.cpuMode ? 'CPU  ' : '2P  ') + p2.name + (this.p2Locked ? '  OK' : '');
+    this.p2Name.text = (this.cpuMode ? 'CPU  全キャラ' : '2P  ' + p2.name) + (this.p2Locked && !this.cpuMode ? '  OK' : '');
     this.p1Name.fill = p1.color;
     this.p2Name.fill = p2.color;
     this.p1Meta.text = p1.title + '  SPD ' + p1.stats.speed + '  HP ' + p1.stats.hp;
@@ -188,7 +215,7 @@ phina.define('SelectScene', {
     for (var i = 0; i < this.cards.length; i++) {
       var card = this.cards[i];
       var isP1 = i === this.p1Index;
-      var isP2 = i === this.p2Index;
+      var isP2 = !this.cpuMode && i === this.p2Index;
       if (isP1 && isP2) {
         card.stroke = null;
         card.strokeWidth = 0;
@@ -215,12 +242,14 @@ phina.define('SelectScene', {
 
   _beginReady: function () {
     if (this.ready) return;
-    if (!allowSameCharacter() && this.p1Index === this.p2Index) return;
+    if (!this.cpuMode && !allowSameCharacter() && this.p1Index === this.p2Index) return;
     this.ready = true;
     this.readyWait = this.READY_FRAMES;
     var p1 = this.roster[this.p1Index];
     var p2 = this.roster[this.p2Index];
-    this.readyMatchup.text = '1P  ' + p1.name + '   VS   ' + (this.cpuMode ? 'CPU  ' : '2P  ') + p2.name;
+    this.readyMatchup.text = this.cpuMode
+      ? '1P  ' + p1.name + '   VS   CPU'
+      : '1P  ' + p1.name + '   VS   2P  ' + p2.name;
     this.readyOverlay.show();
     SoundFx.play('ui_ready');
   },
@@ -244,11 +273,27 @@ phina.define('SelectScene', {
   },
 
   _start: function () {
+    if (this.cpuMode) {
+      var p1Id = this.roster[this.p1Index].id;
+      var queue = buildCpuQueue(p1Id);
+      var stage = GAME_OPTIONS.stageFixed ? pickRandomStage() : null;
+      this.exit({
+        p1Id: p1Id,
+        p2Id: queue.length ? queue[0] : p1Id,
+        cpu: true,
+        cpuQueue: queue,
+        cpuIndex: 0,
+        survival: !!GAME_OPTIONS.survivalMode,
+        stageFixed: !!GAME_OPTIONS.stageFixed,
+        stageId: stage ? stage.id : null,
+      });
+      return;
+    }
     if (!allowSameCharacter() && this.p1Index === this.p2Index) return;
     this.exit({
       p1Id: this.roster[this.p1Index].id,
       p2Id: this.roster[this.p2Index].id,
-      cpu: this.cpuMode,
+      cpu: false,
     });
   },
 
@@ -263,16 +308,21 @@ phina.define('SelectScene', {
     var kb = app.keyboard;
     if (kb.getKeyDown('a') || GamepadHub.down(0, 'left')) this._move(1, -1);
     if (kb.getKeyDown('d') || GamepadHub.down(0, 'right')) this._move(1, 1);
-    if (kb.getKeyDown('left') || GamepadHub.down(1, 'left')) this._move(2, -1);
-    if (kb.getKeyDown('right') || GamepadHub.down(1, 'right')) this._move(2, 1);
+    if (kb.getKeyDown('left') || GamepadHub.down(1, 'left')) {
+      if (!this.cpuMode) this._move(2, -1);
+    }
+    if (kb.getKeyDown('right') || GamepadHub.down(1, 'right')) {
+      if (!this.cpuMode) this._move(2, 1);
+    }
     if (kb.getKeyDown('g') || GamepadHub.down(0, 'light')) {
       this.p1Locked = !this.p1Locked;
-      if (this.cpuMode) this.p2Locked = this.p1Locked;
+      if (this.cpuMode) this.p2Locked = true;
       SoundFx.play(this.p1Locked ? 'ui_ok' : 'ui_move');
       this._refresh();
-      if (this.p1Locked && this.p2Locked) this._beginReady();
+      if (this.cpuMode && this.p1Locked) this._beginReady();
+      else if (this.p1Locked && this.p2Locked) this._beginReady();
     }
-    if (kb.getKeyDown('8') || kb.getKeyDown('num_8') || GamepadHub.down(1, 'light')) {
+    if (!this.cpuMode && (kb.getKeyDown('8') || kb.getKeyDown('num_8') || GamepadHub.down(1, 'light'))) {
       this.p2Locked = !this.p2Locked;
       SoundFx.play(this.p2Locked ? 'ui_ok' : 'ui_move');
       this._refresh();

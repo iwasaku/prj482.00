@@ -38,7 +38,7 @@ phina.define('GameTitleScene', {
     }
 
     Label({
-      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  G弱P H強P B弱K N強K M必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  8弱P 9強P I弱K O強K P必殺\nパッド: 十字/スティック 移動  Y弱P  X強P  A弱K  B強K  L必殺  START決定\n必殺  前+必殺 波動  後+必殺 竜巻  上+必殺 昇龍  下+必殺 超必殺(ゲージ100)\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
+      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  G弱P H強P B弱K N強K M必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  8弱P 9強P I弱K O強K P必殺\nパッド: 十字/スティック 移動  Y弱P  X強P  A弱K  B強K  L必殺  START決定\n必殺  前+必殺 波動(67)  後+必殺 竜巻(33)  上+必殺 昇龍(0)  下+必殺 瞬獄殺(100)\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
       fontSize: 16,
       fill: '#ddd',
       align: 'center',
@@ -103,8 +103,8 @@ phina.define('OptionScene', {
     }).addChildTo(this).setPosition(this.gridX.center(), 80);
 
     this.menuLabels = [];
-    var items = ['同担拒否', 'ボタン配置', 'タイトルへ戻る'];
-    var itemY = [200, 264, 470];
+    var items = ['同担拒否', 'ボタン配置', 'VS CPU', 'タイトルへ戻る'];
+    var itemY = [170, 230, 290, 470];
     for (var i = 0; i < items.length; i++) {
       var lb = Label({
         text: items[i],
@@ -119,6 +119,28 @@ phina.define('OptionScene', {
       fill: '#ffe08a',
       fontWeight: 'bold',
     }).addChildTo(this).setPosition(this.gridX.center() + 200, 200);
+
+    this.cpuIndex = 0;
+    this.cpuLabels = [];
+    this.cpuValues = [];
+    var cpuItems = ['CPUシャッフル', 'サバイバルモード', 'ステージ'];
+    for (var c = 0; c < cpuItems.length; c++) {
+      var cl = Label({
+        text: cpuItems[c],
+        fontSize: 28,
+        fill: '#fff',
+      }).addChildTo(this).setPosition(this.gridX.center() - 160, 200 + c * 56);
+      cl.hide();
+      this.cpuLabels.push(cl);
+      var cv = Label({
+        text: '',
+        fontSize: 28,
+        fill: '#ffe08a',
+        fontWeight: 'bold',
+      }).addChildTo(this).setPosition(this.gridX.center() + 180, 200 + c * 56);
+      cv.hide();
+      this.cpuValues.push(cv);
+    }
 
     this.subTitle = Label({
       text: '',
@@ -157,6 +179,10 @@ phina.define('OptionScene', {
       this.menuLabels[i].fontSize = on ? 36 : 30;
     }
     this.valueLabel.visible = menu && this.menuIndex === 0;
+    for (var c = 0; c < this.cpuLabels.length; c++) {
+      this.cpuLabels[c].visible = this.mode === 'cpu';
+      this.cpuValues[c].visible = this.mode === 'cpu';
+    }
     if (menu) {
       this.titleLabel.text = 'OPTION';
       this.valueLabel.text = GAME_OPTIONS.rejectSameCharacter ? 'ON' : 'OFF';
@@ -165,9 +191,27 @@ phina.define('OptionScene', {
       for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
       this.prompt.text = this.menuIndex === 0
         ? '←→ で切り替え'
-        : (this.menuIndex === 1
-          ? 'SPACE / START で開始'
-          : 'SPACE / START でタイトルへ');
+        : (this.menuIndex === 3
+          ? 'SPACE / START でタイトルへ'
+          : 'SPACE / START で開始');
+    } else if (this.mode === 'cpu') {
+      this.titleLabel.text = 'VS CPU';
+      this.valueLabel.visible = false;
+      this.subTitle.hide();
+      for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
+      var vals = [
+        GAME_OPTIONS.cpuShuffle ? 'ON' : 'OFF',
+        GAME_OPTIONS.survivalMode ? 'ON' : 'OFF',
+        GAME_OPTIONS.stageFixed ? '固定' : 'ランダム',
+      ];
+      for (var c = 0; c < this.cpuLabels.length; c++) {
+        var on = c === this.cpuIndex;
+        this.cpuLabels[c].fill = on ? '#ffe08a' : '#888';
+        this.cpuLabels[c].fontSize = on ? 32 : 26;
+        this.cpuValues[c].text = vals[c];
+        this.cpuValues[c].fill = on ? '#ffe08a' : '#aaa';
+      }
+      this.prompt.text = '←→ で切り替え    ESC / SELECT で戻る';
     } else if (this.mode === 'player') {
       this.titleLabel.text = 'ボタン配置';
       this.valueLabel.visible = false;
@@ -197,6 +241,7 @@ phina.define('OptionScene', {
     GamepadHub.poll();
     var kb = app.keyboard;
     if (this.mode === 'menu') this._updateMenu(kb);
+    else if (this.mode === 'cpu') this._updateCpu(kb);
     else if (this.mode === 'player') this._updatePlayer(kb);
     else this._updateAssign(kb);
   },
@@ -205,7 +250,7 @@ phina.define('OptionScene', {
     var up = kb.getKeyDown('up') || kb.getKeyDown('w') || GamepadHub.down(0, 'up');
     var down = kb.getKeyDown('down') || kb.getKeyDown('s') || GamepadHub.down(0, 'down');
     if (up || down) {
-      this.menuIndex = (this.menuIndex + (down ? 1 : -1) + 3) % 3;
+      this.menuIndex = (this.menuIndex + (down ? 1 : -1) + 4) % 4;
       SoundFx.play('ui_move');
       this._refresh();
     }
@@ -225,12 +270,40 @@ phina.define('OptionScene', {
         this.mode = 'player';
         this._refresh();
       } else if (this.menuIndex === 2) {
+        this.mode = 'cpu';
+        this._refresh();
+      } else if (this.menuIndex === 3) {
         this.exit({ nextLabel: 'title' });
       }
     }
     if (kb.getKeyDown('escape')) {
       SoundFx.play('ui_ok');
       this.exit({ nextLabel: 'title' });
+    }
+  },
+
+  _updateCpu: function (kb) {
+    var up = kb.getKeyDown('up') || kb.getKeyDown('w') || GamepadHub.down(0, 'up');
+    var down = kb.getKeyDown('down') || kb.getKeyDown('s') || GamepadHub.down(0, 'down');
+    if (up || down) {
+      this.cpuIndex = (this.cpuIndex + (down ? 1 : -1) + 3) % 3;
+      SoundFx.play('ui_move');
+      this._refresh();
+    }
+    var left = kb.getKeyDown('left') || kb.getKeyDown('a') || GamepadHub.down(0, 'left');
+    var right = kb.getKeyDown('right') || kb.getKeyDown('d') || GamepadHub.down(0, 'right');
+    if (left || right) {
+      if (this.cpuIndex === 0) GAME_OPTIONS.cpuShuffle = !GAME_OPTIONS.cpuShuffle;
+      else if (this.cpuIndex === 1) GAME_OPTIONS.survivalMode = !GAME_OPTIONS.survivalMode;
+      else GAME_OPTIONS.stageFixed = !GAME_OPTIONS.stageFixed;
+      saveGameOptions();
+      SoundFx.play('ui_move');
+      this._refresh();
+    }
+    if (kb.getKeyDown('escape') || GamepadHub.selectDown()) {
+      SoundFx.play('ui_ok');
+      this.mode = 'menu';
+      this._refresh();
     }
   },
 
@@ -372,6 +445,12 @@ phina.define('VersusScene', {
     this.p2Wins = (options && options.p2Wins) || 0;
     this.round = (options && options.round) || 1;
     this.cpuMode = !!(options && options.cpu);
+    this.p1Id = options && options.p1Id;
+    this.cpuQueue = (options && options.cpuQueue) || null;
+    this.cpuIndex = (options && options.cpuIndex) || 0;
+    this.survival = !!(options && options.survival);
+    this.stageFixed = !!(options && options.stageFixed);
+    this.carryHp = options && options.p1Hp;
 
     var p1Data = getCharacter(options && options.p1Id);
     var p2Data = getCharacter(options && options.p2Id);
@@ -397,6 +476,9 @@ phina.define('VersusScene', {
       hp: p1Data.stats.hp,
       moves: mergeMoves(p1Data.moves),
     }).addChildTo(this).setPosition(260, GROUND_Y);
+    if (this.survival && this.carryHp != null) {
+      this.p1.hp = Math.max(1, Math.min(this.p1.maxHp, this.carryHp));
+    }
 
     this.p2 = Fighter({
       name: '2P',
@@ -456,6 +538,12 @@ phina.define('VersusScene', {
       fontSize: 12,
       fill: '#ddd',
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 78);
+
+    this.cpuProgress = Label({
+      text: this.cpuQueue ? ((this.cpuIndex + 1) + ' / ' + this.cpuQueue.length) : '',
+      fontSize: 12,
+      fill: '#ffe08a',
+    }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 94);
 
     this.p1WinMarks = this._winMarks(24, 58, 0);
     this.p2WinMarks = this._winMarks(SCREEN_WIDTH - 24, 58, 1);
@@ -911,6 +999,10 @@ phina.define('VersusScene', {
       this.fadeOverlay.alpha = this.fadeAlpha;
       if (this.fadeAlpha >= 1) {
         if (this.matchOver) {
+          if (this.cpuMode && this.cpuQueue) {
+            this._exitCpu();
+            return;
+          }
           this.exit({
             winner: this.winner,
             p1Wins: this.p1Wins,
@@ -936,6 +1028,31 @@ phina.define('VersusScene', {
         this._startIntro();
       }
     }
+  },
+
+  _exitCpu: function () {
+    var won = this.winner === '1P';
+    if (won) {
+      var next = this.cpuIndex + 1;
+      if (next < this.cpuQueue.length) {
+        this.exit({
+          nextLabel: 'versus',
+          p1Id: this.p1Id,
+          p2Id: this.cpuQueue[next],
+          cpu: true,
+          cpuQueue: this.cpuQueue,
+          cpuIndex: next,
+          survival: this.survival,
+          stageFixed: this.stageFixed,
+          stageId: this.stageFixed ? this.stageData.id : null,
+          p1Hp: this.survival ? this.p1.hp : null,
+        });
+        return;
+      }
+      this.exit({ nextLabel: 'result', ending: 'good', cpu: true, winner: '1P' });
+      return;
+    }
+    this.exit({ nextLabel: 'result', ending: 'bad', cpu: true, winner: this.winner });
   },
 
   _startIntro: function () {
@@ -978,19 +1095,20 @@ phina.define('GameResultScene', {
     this.superInit(options);
     this.backgroundColor = '#101010';
     var winner = (options && options.winner) || 'DRAW';
+    var ending = options && options.ending;
     var p1Wins = (options && options.p1Wins) || 0;
     var p2Wins = (options && options.p2Wins) || 0;
     this.cpuMode = !!(options && options.cpu);
 
     Label({
-      text: winner === 'DRAW' ? 'DRAW' : winner + ' WIN',
+      text: ending === 'good' ? 'GOOD END' : (ending === 'bad' ? 'BAD END' : (winner === 'DRAW' ? 'DRAW' : winner + ' WIN')),
       fontSize: 72,
       fill: '#ffe08a',
       fontWeight: 'bold',
     }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-1));
 
     Label({
-      text: p1Wins + '  -  ' + p2Wins,
+      text: ending ? '' : (p1Wins + '  -  ' + p2Wins),
       fontSize: 28,
       fill: '#ddd',
     }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(0.4));

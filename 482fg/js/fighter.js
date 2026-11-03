@@ -68,6 +68,7 @@ var MOVES = {
     projectile: true,
     projectileDelay: 12,
     projectileSpeed: 7,
+    gaugeCost: 67,
   },
   shoryu: {
     anim: 'attack_shoryu',
@@ -77,6 +78,7 @@ var MOVES = {
     launch: -12.5,
     forward: 3.5,
     invulnFrames: 8,
+    gaugeCost: 0,
   },
   tatsu: {
     anim: 'attack_tatsu',
@@ -84,6 +86,7 @@ var MOVES = {
     knockback: 5.0, hitstun: 16,
     boxW: 70, boxH: 30, boxX: 48, boxY: -40,
     travel: 5.5,
+    gaugeCost: 33,
   },
   throw_ippon: {
     anim: 'attack_throw',
@@ -116,9 +119,9 @@ var MOVES = {
 
 var COMMANDS = [
   { dir: 'down', move: 'shungoku', gauge: 100 },
-  { dir: 'up', move: 'shoryu' },
-  { dir: 'forward', move: 'hadou' },
-  { dir: 'back', move: 'tatsu' },
+  { dir: 'up', move: 'shoryu', gauge: 0 },
+  { dir: 'forward', move: 'hadou', gauge: 67 },
+  { dir: 'back', move: 'tatsu', gauge: 33 },
 ];
 
 var CMD_BUFFER = 20;
@@ -401,7 +404,7 @@ phina.define('Fighter', {
     var data = this.moves[kind];
     if (!data || !this.canAct()) return;
     if (this.state === 'jump') return;
-    if (data.super && !this.spendGauge(data.gaugeCost || 100)) return;
+    if (data.gaugeCost && !this.spendGauge(data.gaugeCost)) return;
     this.state = 'attack';
     this.stateTime = 0;
     this.move = data;
