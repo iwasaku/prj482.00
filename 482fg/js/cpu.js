@@ -1,11 +1,31 @@
 phina.globalize();
 
-var CPU_REACT = 7;
-var CPU_MISTAKE = 0.14;
+var CPU_LEVELS = [
+  { react: 14, mistake: 0.35, special: 0.15, super: 0 },
+  { react: 11, mistake: 0.24, special: 0.30, super: 0.2 },
+  { react: 7, mistake: 0.14, special: 0.45, super: 1 },
+  { react: 6, mistake: 0.08, special: 0.55, super: 1 },
+  { react: 5, mistake: 0.04, special: 0.65, super: 1 },
+  { react: 4, mistake: 0.02, special: 0.75, super: 1 },
+];
+
+function cpuLevelFor(index) {
+  var off = GAME_OPTIONS.cpuDifficulty === '初級' ? -1 : (GAME_OPTIONS.cpuDifficulty === '上級' ? 1 : 0);
+  var level = (index || 0) + off;
+  if (level < 0) level = 0;
+  if (level > CPU_LEVELS.length - 1) level = CPU_LEVELS.length - 1;
+  return level;
+}
 
 phina.define('CpuController', {
-  init: function (fighter) {
+  init: function (fighter, level) {
     this.fighter = fighter;
+    this.level = Math.max(0, Math.min(CPU_LEVELS.length - 1, level || 0));
+    var spec = CPU_LEVELS[this.level];
+    this.react = spec.react;
+    this.mistake = spec.mistake;
+    this.specialRate = spec.special;
+    this.superRate = spec.super;
     this.plan = null;
     this.step = 0;
     this.left = 0;
@@ -73,19 +93,19 @@ phina.define('CpuController', {
       opponent.stateTime < opponent.move.startup + opponent.move.active;
     var recovering = attack && opponent.stateTime >= opponent.move.startup + opponent.move.active;
     var air = !opponent.onGround;
-    var mistake = Math.random() < CPU_MISTAKE;
+    var mistake = Math.random() < this.mistake;
 
     if (this._shotNear(shots) && !mistake) {
-      this._queue(dist < 160 ? this._block(false, 10) : this._jump(), CPU_REACT);
+      this._queue(dist < 160 ? this._block(false, 10) : this._jump(), this.react);
       return;
     }
     if ((startup || active) && !opponent.move.projectile && !mistake) {
-      this._queue(this._block(!!opponent.move.low, Math.max(6, opponent.move.startup + opponent.move.active - opponent.stateTime + 4)), CPU_REACT);
+      this._queue(this._block(!!opponent.move.low, Math.max(6, opponent.move.startup + opponent.move.active - opponent.stateTime + 4)), this.react);
       return;
     }
     if (air && dist < 170 && opponent.vy > -2) {
-      if (f.gauge >= 100 && dist < 110) this._set(this._super());
-      else if (!mistake) this._set(this._special('up'));
+      if (f.gauge >= 100 && dist < 110 && Math.random() < this.superRate) this._set(this._super());
+      else if (!mistake && Math.random() < this.specialRate) this._set(this._special('up'));
       else this._set(this._block(false, 12));
       return;
     }
@@ -93,12 +113,12 @@ phina.define('CpuController', {
       this._set(dist < 62 ? this._throw() : this._poke());
       return;
     }
-    if (f.gauge >= 100 && dist < 100 && opponent.state !== 'hit') {
+    if (f.gauge >= 100 && dist < 100 && opponent.state !== 'hit' && Math.random() < this.superRate) {
       this._set(this._super());
       return;
     }
     if (dist > 230) {
-      this._set(Math.random() < 0.45 ? this._special('forward') : this._walk(16));
+      this._set(Math.random() < this.specialRate ? this._special('forward') : this._walk(16));
       return;
     }
     if (dist > 96) {

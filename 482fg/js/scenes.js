@@ -123,7 +123,7 @@ phina.define('OptionScene', {
     this.cpuIndex = 0;
     this.cpuLabels = [];
     this.cpuValues = [];
-    var cpuItems = ['CPUシャッフル', 'サバイバルモード', 'ステージ'];
+    var cpuItems = ['難易度', 'CPUシャッフル', 'サバイバルモード', 'ステージ'];
     for (var c = 0; c < cpuItems.length; c++) {
       var cl = Label({
         text: cpuItems[c],
@@ -178,28 +178,33 @@ phina.define('OptionScene', {
       this.menuLabels[i].fill = on ? '#ffe08a' : '#888';
       this.menuLabels[i].fontSize = on ? 36 : 30;
     }
-    this.valueLabel.visible = menu && this.menuIndex === 0;
+    this.valueLabel.visible = false;
     for (var c = 0; c < this.cpuLabels.length; c++) {
       this.cpuLabels[c].visible = this.mode === 'cpu';
       this.cpuValues[c].visible = this.mode === 'cpu';
     }
     if (menu) {
       this.titleLabel.text = 'OPTION';
-      this.valueLabel.text = GAME_OPTIONS.rejectSameCharacter ? 'ON' : 'OFF';
-      this.valueLabel.fill = GAME_OPTIONS.rejectSameCharacter ? '#ff8a3a' : '#3aa0ff';
       this.subTitle.hide();
       for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
-      this.prompt.text = this.menuIndex === 0
-        ? '←→ で切り替え'
-        : (this.menuIndex === 3
-          ? 'SPACE / START でタイトルへ'
-          : 'SPACE / START で開始');
+      this.prompt.text = this.menuIndex === 3
+        ? 'SPACE / START でタイトルへ'
+        : 'SPACE / START で開始';
+    } else if (this.mode === 'reject') {
+      this.titleLabel.text = '同担拒否';
+      this.valueLabel.visible = false;
+      this.subTitle.show();
+      this.subTitle.text = GAME_OPTIONS.rejectSameCharacter ? 'ON' : 'OFF';
+      this.subTitle.fill = GAME_OPTIONS.rejectSameCharacter ? '#ff8a3a' : '#3aa0ff';
+      for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
+      this.prompt.text = '←→ で切り替え    ESC / SELECT で戻る';
     } else if (this.mode === 'cpu') {
       this.titleLabel.text = 'VS CPU';
       this.valueLabel.visible = false;
       this.subTitle.hide();
       for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
       var vals = [
+        GAME_OPTIONS.cpuDifficulty || '中級',
         GAME_OPTIONS.cpuShuffle ? 'ON' : 'OFF',
         GAME_OPTIONS.survivalMode ? 'ON' : 'OFF',
         GAME_OPTIONS.stageFixed ? '固定' : 'ランダム',
@@ -241,6 +246,7 @@ phina.define('OptionScene', {
     GamepadHub.poll();
     var kb = app.keyboard;
     if (this.mode === 'menu') this._updateMenu(kb);
+    else if (this.mode === 'reject') this._updateReject(kb);
     else if (this.mode === 'cpu') this._updateCpu(kb);
     else if (this.mode === 'player') this._updatePlayer(kb);
     else this._updateAssign(kb);
@@ -254,19 +260,12 @@ phina.define('OptionScene', {
       SoundFx.play('ui_move');
       this._refresh();
     }
-    if (this.menuIndex === 0) {
-      var left = kb.getKeyDown('left') || kb.getKeyDown('a') || GamepadHub.down(0, 'left');
-      var right = kb.getKeyDown('right') || kb.getKeyDown('d') || GamepadHub.down(0, 'right');
-      if (left || right) {
-        GAME_OPTIONS.rejectSameCharacter = !GAME_OPTIONS.rejectSameCharacter;
-        saveGameOptions();
-        SoundFx.play('ui_move');
-        this._refresh();
-      }
-    }
     if (kb.getKeyDown('space') || GamepadHub.startDown()) {
       SoundFx.play('ui_ok');
-      if (this.menuIndex === 1) {
+      if (this.menuIndex === 0) {
+        this.mode = 'reject';
+        this._refresh();
+      } else if (this.menuIndex === 1) {
         this.mode = 'player';
         this._refresh();
       } else if (this.menuIndex === 2) {
@@ -282,19 +281,40 @@ phina.define('OptionScene', {
     }
   },
 
+  _updateReject: function (kb) {
+    var left = kb.getKeyDown('left') || kb.getKeyDown('a') || GamepadHub.down(0, 'left');
+    var right = kb.getKeyDown('right') || kb.getKeyDown('d') || GamepadHub.down(0, 'right');
+    if (left || right) {
+      GAME_OPTIONS.rejectSameCharacter = !GAME_OPTIONS.rejectSameCharacter;
+      saveGameOptions();
+      SoundFx.play('ui_move');
+      this._refresh();
+    }
+    if (kb.getKeyDown('escape') || GamepadHub.selectDown()) {
+      SoundFx.play('ui_ok');
+      this.mode = 'menu';
+      this._refresh();
+    }
+  },
+
   _updateCpu: function (kb) {
     var up = kb.getKeyDown('up') || kb.getKeyDown('w') || GamepadHub.down(0, 'up');
     var down = kb.getKeyDown('down') || kb.getKeyDown('s') || GamepadHub.down(0, 'down');
     if (up || down) {
-      this.cpuIndex = (this.cpuIndex + (down ? 1 : -1) + 3) % 3;
+      this.cpuIndex = (this.cpuIndex + (down ? 1 : -1) + 4) % 4;
       SoundFx.play('ui_move');
       this._refresh();
     }
     var left = kb.getKeyDown('left') || kb.getKeyDown('a') || GamepadHub.down(0, 'left');
     var right = kb.getKeyDown('right') || kb.getKeyDown('d') || GamepadHub.down(0, 'right');
     if (left || right) {
-      if (this.cpuIndex === 0) GAME_OPTIONS.cpuShuffle = !GAME_OPTIONS.cpuShuffle;
-      else if (this.cpuIndex === 1) GAME_OPTIONS.survivalMode = !GAME_OPTIONS.survivalMode;
+      if (this.cpuIndex === 0) {
+        var order = ['初級', '中級', '上級'];
+        var i = order.indexOf(GAME_OPTIONS.cpuDifficulty);
+        if (i < 0) i = 1;
+        GAME_OPTIONS.cpuDifficulty = order[(i + (right ? 1 : -1) + 3) % 3];
+      } else if (this.cpuIndex === 1) GAME_OPTIONS.cpuShuffle = !GAME_OPTIONS.cpuShuffle;
+      else if (this.cpuIndex === 2) GAME_OPTIONS.survivalMode = !GAME_OPTIONS.survivalMode;
       else GAME_OPTIONS.stageFixed = !GAME_OPTIONS.stageFixed;
       saveGameOptions();
       SoundFx.play('ui_move');
@@ -486,6 +506,7 @@ phina.define('VersusScene', {
       keys: P2_KEYS,
       padIndex: 1,
       cpu: this.cpuMode,
+      cpuLevel: cpuLevelFor(this.cpuIndex),
       facing: -1,
       image: p2Data.image2p || p2Data.image,
       ss: p2Data.ss,

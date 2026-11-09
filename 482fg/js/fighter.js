@@ -146,7 +146,7 @@ phina.define('Fighter', {
     this.keys = options.keys;
     this.padIndex = options.padIndex != null ? options.padIndex : 0;
     this.cpu = !!options.cpu;
-    this.cpuBrain = this.cpu ? CpuController(this) : null;
+    this.cpuBrain = this.cpu ? CpuController(this, options.cpuLevel) : null;
     this.opponent = null;
     this.shots = null;
     this.moves = options.moves || MOVES;

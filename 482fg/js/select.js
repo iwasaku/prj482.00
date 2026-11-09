@@ -4,11 +4,13 @@ phina.globalize();
 // cpuShuffle: VS CPUの順番をシャッフル
 // survivalMode: VS CPUで体力を引き継ぐ
 // stageFixed: VS CPUのステージを固定
+// cpuDifficulty: VS CPU全体の難易度 初級 / 中級 / 上級
 var GAME_OPTIONS = {
   rejectSameCharacter: false,
   cpuShuffle: true,
   survivalMode: false,
   stageFixed: false,
+  cpuDifficulty: '中級',
 };
 
 function loadGameOptions() {
@@ -22,6 +24,9 @@ function loadGameOptions() {
     if (typeof saved.cpuShuffle === 'boolean') GAME_OPTIONS.cpuShuffle = saved.cpuShuffle;
     if (typeof saved.survivalMode === 'boolean') GAME_OPTIONS.survivalMode = saved.survivalMode;
     if (typeof saved.stageFixed === 'boolean') GAME_OPTIONS.stageFixed = saved.stageFixed;
+    if (saved.cpuDifficulty === 'easy' || saved.cpuDifficulty === '初級') GAME_OPTIONS.cpuDifficulty = '初級';
+    else if (saved.cpuDifficulty === 'hard' || saved.cpuDifficulty === '上級') GAME_OPTIONS.cpuDifficulty = '上級';
+    else if (saved.cpuDifficulty === 'normal' || saved.cpuDifficulty === '中級') GAME_OPTIONS.cpuDifficulty = '中級';
   } catch (e) {}
 }
 
