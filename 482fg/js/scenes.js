@@ -1122,7 +1122,7 @@ phina.define('GameResultScene', {
     this.cpuMode = !!(options && options.cpu);
 
     Label({
-      text: ending === 'good' ? 'GOOD END' : (ending === 'bad' ? 'BAD END' : (winner === 'DRAW' ? 'DRAW' : winner + ' WIN')),
+      text: ending === 'good' ? 'YOU WIN!' : (ending === 'bad' ? 'YOU LOSE' : (winner === 'DRAW' ? 'DRAW' : winner + ' WIN')),
       fontSize: 72,
       fill: '#ffe08a',
       fontWeight: 'bold',
