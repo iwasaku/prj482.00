@@ -11,6 +11,7 @@ phina.define('GameTitleScene', {
       { label: '1P VS 2P', cpu: false },
       { label: '1P VS CPU', cpu: true },
       { label: 'OPTION', option: true },
+      { label: '遊び方', howto: true },
     ];
 
     Label({
@@ -37,20 +38,13 @@ phina.define('GameTitleScene', {
       this.modeLabels.push(lb);
     }
 
-    Label({
-      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  G弱P H強P B弱K N強K M必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  8弱P 9強P I弱K O強K P必殺\nパッド: 十字/スティック 移動  Y弱P  X強P  A弱K  B強K  L必殺  START決定\n必殺  前+必殺 波動(67)  後+必殺 竜巻(33)  上+必殺 昇龍(0)  下+必殺 瞬獄殺(100)\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
-      fontSize: 16,
-      fill: '#ddd',
-      align: 'center',
-    }).addChildTo(this).setPosition(this.gridX.center(), 390);
+    this._refreshModes();
 
     Label({
       text: '↑↓ で選択   SPACE / START で決定',
       fontSize: 22,
       fill: '#ffe08a',
     }).addChildTo(this).setPosition(this.gridX.center(), 480);
-
-    this._refreshModes();
   },
 
   _refreshModes: function () {
@@ -77,9 +71,49 @@ phina.define('GameTitleScene', {
       var mode = this.modes[this.modeIndex];
       if (mode.option) {
         this.exit({ nextLabel: 'option' });
+      } else if (mode.howto) {
+        this.exit({ nextLabel: 'howto' });
       } else {
         this.exit({ cpu: !!mode.cpu, nextLabel: 'select' });
       }
+    }
+  },
+});
+
+phina.define('HowToScene', {
+  superClass: 'DisplayScene',
+
+  init: function (options) {
+    this.superInit(options);
+    this.backgroundColor = '#151515';
+
+    Label({
+      text: '遊び方',
+      fontSize: 48,
+      fill: '#fff',
+      fontWeight: 'bold',
+    }).addChildTo(this).setPosition(this.gridX.center(), 70);
+
+    Label({
+      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  G弱P H強P B弱K N強K M必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  8弱P 9強P I弱K O強K P必殺\nパッド: 十字/スティック 移動  Y弱P  X強P  A弱K  B強K  L必殺  START決定\n必殺  前+必殺 波動(67)  後+必殺 竜巻(33)  上+必殺 昇龍(0)  下+必殺 瞬獄殺(100)\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
+      fontSize: 20,
+      fill: '#ddd',
+      align: 'center',
+    }).addChildTo(this).setPosition(this.gridX.center(), 240);
+
+    Label({
+      text: 'SPACE / START / ESC / SELECT でタイトルへ',
+      fontSize: 20,
+      fill: '#aaa',
+    }).addChildTo(this).setPosition(this.gridX.center(), 480);
+  },
+
+  update: function (app) {
+    GamepadHub.poll();
+    var kb = app.keyboard;
+    if (kb.getKeyDown('space') || kb.getKeyDown('escape') || GamepadHub.startDown() || GamepadHub.selectDown()) {
+      SoundFx.play('ui_ok');
+      this.exit({ nextLabel: 'title' });
     }
   },
 });

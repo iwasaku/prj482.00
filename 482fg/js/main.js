@@ -49,6 +49,7 @@ phina.main(function () {
     scenes: [
       { className: 'GameTitleScene', label: 'title', nextLabel: 'select' },
       { className: 'OptionScene', label: 'option', nextLabel: 'title' },
+      { className: 'HowToScene', label: 'howto', nextLabel: 'title' },
       { className: 'SelectScene', label: 'select', nextLabel: 'versus' },
       { className: 'VersusScene', label: 'versus', nextLabel: 'result' },
       { className: 'GameResultScene', label: 'result', nextLabel: 'select' },
