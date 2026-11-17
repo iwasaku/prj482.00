@@ -9,33 +9,33 @@ phina.globalize();
 var STAGE_ROSTER = [
   {
     id: 'night',
-    name: 'NIGHT PARK',
-    image: 'stage_night',
-    imagePath: 'assets/image/stage_night.png',
+    name: '西永福',
+    image: 'stage_nishieifuku',
+    imagePath: 'assets/image/stage_nishieifuku.png',
   },
   {
     id: 'noon',
-    name: 'NOON STREET',
-    image: 'stage_noon',
-    imagePath: 'assets/image/stage_noon.png',
+    name: '大塚',
+    image: 'stage_ootsuka',
+    imagePath: 'assets/image/stage_ootsuka.png',
   },
   {
     id: 'sunset',
-    name: 'SUNSET PIER',
-    image: 'stage_sunset',
-    imagePath: 'assets/image/stage_sunset.png',
+    name: '下北沢',
+    image: 'stage_shimokitazawa',
+    imagePath: 'assets/image/stage_shimokitazawa.png',
   },
   {
     id: 'rain',
-    name: 'RAIN ALLEY',
-    image: 'stage_rain',
-    imagePath: 'assets/image/stage_rain.png',
+    name: '新宿',
+    image: 'stage_shinjuku',
+    imagePath: 'assets/image/stage_shinjuku.png',
   },
   {
     id: 'dojo',
-    name: 'OLD DOJO',
-    image: 'stage_dojo',
-    imagePath: 'assets/image/stage_dojo.png',
+    name: '渋谷',
+    image: 'stage_shibuya',
+    imagePath: 'assets/image/stage_shibuya.png',
   },
 ];
 

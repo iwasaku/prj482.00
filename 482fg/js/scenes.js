@@ -567,12 +567,16 @@ phina.define('VersusScene', {
       fontSize: 14,
       fill: '#fff',
       align: 'left',
+      stroke: "black",
+      strokeWidth: 4,
     }).addChildTo(this).setPosition(24, 18);
     Label({
       text: (this.cpuMode ? 'CPU ' : '2P ') + p2Data.name,
       fontSize: 14,
       fill: '#fff',
       align: 'right',
+      stroke: "black",
+      strokeWidth: 4,
     }).addChildTo(this).setPosition(SCREEN_WIDTH - 24, 18);
 
     this.timerLabel = Label({
@@ -580,24 +584,32 @@ phina.define('VersusScene', {
       fontSize: 36,
       fill: '#fff',
       fontWeight: 'bold',
+      stroke: "black",
+      strokeWidth: 4,
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 36);
 
     Label({
       text: this.stageData.name,
       fontSize: 12,
       fill: '#ffe08a',
+      stroke: "black",
+      strokeWidth: 4,
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 62);
 
     this.roundLabel = Label({
       text: 'ROUND ' + this.round,
       fontSize: 12,
       fill: '#ddd',
+      stroke: "black",
+      strokeWidth: 4,
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 78);
 
     this.cpuProgress = Label({
       text: this.cpuQueue ? ((this.cpuIndex + 1) + ' / ' + this.cpuQueue.length) : '',
       fontSize: 12,
       fill: '#ffe08a',
+      stroke: "black",
+      strokeWidth: 4,
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 94);
 
     this.p1WinMarks = this._winMarks(24, 58, 0);
@@ -619,6 +631,8 @@ phina.define('VersusScene', {
       fontSize: 64,
       fill: '#fff',
       fontWeight: 'bold',
+      stroke: "black",
+      strokeWidth: 4,
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 200);
 
     this.introLabel = Label({
@@ -626,6 +640,8 @@ phina.define('VersusScene', {
       fontSize: 64,
       fill: '#ffe08a',
       fontWeight: 'bold',
+      stroke: "black",
+      strokeWidth: 4,
     }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 210);
 
     this.fadeOverlay = RectangleShape({

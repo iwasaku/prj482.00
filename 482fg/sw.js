@@ -1,4 +1,4 @@
-const CACHE_NAME = '482-fighter-v11';
+const CACHE_NAME = '482-fighter-v12';
 
 const PRECACHE = [
   './',
@@ -32,11 +32,11 @@ const PRECACHE = [
   './assets/image/char_midare.png',
   './assets/image/char_murata.png',
   './assets/image/char_yasui.png',
-  './assets/image/stage_dojo.png',
-  './assets/image/stage_night.png',
-  './assets/image/stage_noon.png',
-  './assets/image/stage_rain.png',
-  './assets/image/stage_sunset.png',
+  './assets/image/stage_nishieifuku.png',
+  './assets/image/stage_ootsuka.png',
+  './assets/image/stage_shibuya.png',
+  './assets/image/stage_shimokitazawa.png',
+  './assets/image/stage_shinjuku.png',
   './assets/sound/block.mp3',
   './assets/sound/dash.mp3',
   './assets/sound/draw.mp3',
