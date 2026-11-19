@@ -3,13 +3,15 @@ phina.globalize();
 // 同担拒否: true で同一キャラ選択不可
 // cpuShuffle: VS CPUの順番をシャッフル
 // survivalMode: VS CPUで体力を引き継ぐ
-// stageFixed: VS CPUのステージを固定
+// stageSelect2p: 'on' | 'random' | ステージid
+// stageSelectCpu: 'perChar' | 'random' | ステージid
 // cpuDifficulty: VS CPU全体の難易度 初級 / 中級 / 上級
 var GAME_OPTIONS = {
   rejectSameCharacter: false,
   cpuShuffle: true,
   survivalMode: false,
-  stageFixed: false,
+  stageSelect2p: 'random',
+  stageSelectCpu: 'random',
   cpuDifficulty: '中級',
 };
 
@@ -23,7 +25,14 @@ function loadGameOptions() {
     }
     if (typeof saved.cpuShuffle === 'boolean') GAME_OPTIONS.cpuShuffle = saved.cpuShuffle;
     if (typeof saved.survivalMode === 'boolean') GAME_OPTIONS.survivalMode = saved.survivalMode;
-    if (typeof saved.stageFixed === 'boolean') GAME_OPTIONS.stageFixed = saved.stageFixed;
+    if (saved.stageSelect2p && (saved.stageSelect2p === 'on' || saved.stageSelect2p === 'random' || getStage(saved.stageSelect2p))) {
+      GAME_OPTIONS.stageSelect2p = saved.stageSelect2p;
+    } else if (saved.stageSelect && (saved.stageSelect === 'on' || saved.stageSelect === 'random' || getStage(saved.stageSelect))) {
+      GAME_OPTIONS.stageSelect2p = saved.stageSelect;
+    }
+    if (saved.stageSelectCpu && (saved.stageSelectCpu === 'perChar' || saved.stageSelectCpu === 'random' || getStage(saved.stageSelectCpu))) {
+      GAME_OPTIONS.stageSelectCpu = saved.stageSelectCpu;
+    }
     if (saved.cpuDifficulty === 'easy' || saved.cpuDifficulty === '初級') GAME_OPTIONS.cpuDifficulty = '初級';
     else if (saved.cpuDifficulty === 'hard' || saved.cpuDifficulty === '上級') GAME_OPTIONS.cpuDifficulty = '上級';
     else if (saved.cpuDifficulty === 'normal' || saved.cpuDifficulty === '中級') GAME_OPTIONS.cpuDifficulty = '中級';
@@ -278,27 +287,53 @@ phina.define('SelectScene', {
   },
 
   _start: function () {
+    var stageSel = this.cpuMode ? (GAME_OPTIONS.stageSelectCpu || 'random') : (GAME_OPTIONS.stageSelect2p || 'random');
+    var stageId = null;
+    var stageMode = null;
+    var next = 'versus';
+
+    if (this.cpuMode) {
+      if (stageSel === 'perChar') {
+        stageMode = 'perChar';
+      } else if (stageSel !== 'random') {
+        stageId = stageSel;
+      }
+    } else {
+      if (stageSel === 'on') {
+        next = 'stageselect';
+      } else if (stageSel !== 'random') {
+        stageId = stageSel;
+      }
+    }
+
     if (this.cpuMode) {
       var p1Id = this.roster[this.p1Index].id;
       var queue = buildCpuQueue(p1Id);
-      var stage = GAME_OPTIONS.stageFixed ? pickRandomStage() : null;
+      var firstP2 = queue.length ? queue[0] : p1Id;
+      if (stageMode === 'perChar') {
+        var ch = getCharacter(firstP2);
+        stageId = (ch && ch.stage) || null;
+      }
       this.exit({
+        nextLabel: next,
         p1Id: p1Id,
-        p2Id: queue.length ? queue[0] : p1Id,
+        p2Id: firstP2,
         cpu: true,
         cpuQueue: queue,
         cpuIndex: 0,
         survival: !!GAME_OPTIONS.survivalMode,
-        stageFixed: !!GAME_OPTIONS.stageFixed,
-        stageId: stage ? stage.id : null,
+        stageId: stageId,
+        stageMode: stageMode,
       });
       return;
     }
     if (!allowSameCharacter() && this.p1Index === this.p2Index) return;
     this.exit({
+      nextLabel: next,
       p1Id: this.roster[this.p1Index].id,
       p2Id: this.roster[this.p2Index].id,
       cpu: false,
+      stageId: stageId,
     });
   },
 

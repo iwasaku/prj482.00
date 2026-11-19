@@ -30,6 +30,7 @@ var STAGE_ROSTER = [
     name: '新宿',
     image: 'stage_shinjuku',
     imagePath: 'assets/image/stage_shinjuku.png',
+    rain: true,
   },
   {
     id: 'dojo',

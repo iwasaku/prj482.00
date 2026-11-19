@@ -137,8 +137,8 @@ phina.define('OptionScene', {
     }).addChildTo(this).setPosition(this.gridX.center(), 80);
 
     this.menuLabels = [];
-    var items = ['同担拒否', 'ボタン配置', 'VS CPU', 'タイトルへ戻る'];
-    var itemY = [170, 230, 290, 470];
+    var items = ['同担拒否', 'ボタン配置', 'VS CPU', 'ステージ選択', 'タイトルへ戻る'];
+    var itemY = [150, 200, 250, 300, 470];
     for (var i = 0; i < items.length; i++) {
       var lb = Label({
         text: items[i],
@@ -157,7 +157,7 @@ phina.define('OptionScene', {
     this.cpuIndex = 0;
     this.cpuLabels = [];
     this.cpuValues = [];
-    var cpuItems = ['難易度', 'CPUシャッフル', 'サバイバルモード', 'ステージ'];
+    var cpuItems = ['難易度', 'CPUシャッフル', 'サバイバルモード'];
     for (var c = 0; c < cpuItems.length; c++) {
       var cl = Label({
         text: cpuItems[c],
@@ -213,6 +213,12 @@ phina.define('OptionScene', {
       this.menuLabels[i].fontSize = on ? 36 : 30;
     }
     this.valueLabel.visible = false;
+    if (this.stageLabels && this.mode !== 'stage') {
+      for (var sj = 0; sj < this.stageLabels.length; sj++) {
+        this.stageLabels[sj].hide();
+        this.stageValues[sj].hide();
+      }
+    }
     for (var c = 0; c < this.cpuLabels.length; c++) {
       this.cpuLabels[c].visible = this.mode === 'cpu';
       this.cpuValues[c].visible = this.mode === 'cpu';
@@ -221,7 +227,7 @@ phina.define('OptionScene', {
       this.titleLabel.text = 'OPTION';
       this.subTitle.hide();
       for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
-      this.prompt.text = this.menuIndex === 3
+      this.prompt.text = this.menuIndex === 4
         ? 'SPACE / START でタイトルへ'
         : 'SPACE / START で開始';
     } else if (this.mode === 'reject') {
@@ -241,7 +247,6 @@ phina.define('OptionScene', {
         GAME_OPTIONS.cpuDifficulty || '中級',
         GAME_OPTIONS.cpuShuffle ? 'ON' : 'OFF',
         GAME_OPTIONS.survivalMode ? 'ON' : 'OFF',
-        GAME_OPTIONS.stageFixed ? '固定' : 'ランダム',
       ];
       for (var c = 0; c < this.cpuLabels.length; c++) {
         var on = c === this.cpuIndex;
@@ -251,6 +256,37 @@ phina.define('OptionScene', {
         this.cpuValues[c].fill = on ? '#ffe08a' : '#aaa';
       }
       this.prompt.text = '←→ で切り替え    ESC / SELECT で戻る';
+    } else if (this.mode === 'stage') {
+      this.titleLabel.text = 'ステージ選択';
+      this.valueLabel.visible = false;
+      this.subTitle.hide();
+      for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
+      var s2 = GAME_OPTIONS.stageSelect2p || 'random';
+      var sc = GAME_OPTIONS.stageSelectCpu || 'random';
+      var l2 = s2 === 'on' ? 'ON' : (s2 === 'random' ? 'ランダム' : (getStage(s2).name || s2));
+      var lc = sc === 'perChar' ? 'キャラごと' : (sc === 'random' ? 'ランダム' : (getStage(sc).name || sc));
+      if (!this.stageLabels) {
+        this.stageLabels = [];
+        this.stageValues = [];
+        var names = ['VS 2P', 'VS CPU'];
+        for (var si = 0; si < 2; si++) {
+          var sl = Label({ text: names[si], fontSize: 28, fill: '#fff' }).addChildTo(this).setPosition(this.gridX.center() - 160, 200 + si * 60);
+          this.stageLabels.push(sl);
+          var sv = Label({ text: '', fontSize: 28, fill: '#ffe08a', fontWeight: 'bold' }).addChildTo(this).setPosition(this.gridX.center() + 180, 200 + si * 60);
+          this.stageValues.push(sv);
+        }
+      }
+      var vals = [l2, lc];
+      for (var si = 0; si < 2; si++) {
+        var on = si === (this.stageIndex || 0);
+        this.stageLabels[si].show();
+        this.stageLabels[si].fill = on ? '#ffe08a' : '#888';
+        this.stageLabels[si].fontSize = on ? 32 : 26;
+        this.stageValues[si].show();
+        this.stageValues[si].text = vals[si];
+        this.stageValues[si].fill = on ? '#ffe08a' : '#aaa';
+      }
+      this.prompt.text = '↑↓ で選択  ←→ で切り替え    ESC / SELECT で戻る';
     } else if (this.mode === 'player') {
       this.titleLabel.text = 'ボタン配置';
       this.valueLabel.visible = false;
@@ -282,6 +318,7 @@ phina.define('OptionScene', {
     if (this.mode === 'menu') this._updateMenu(kb);
     else if (this.mode === 'reject') this._updateReject(kb);
     else if (this.mode === 'cpu') this._updateCpu(kb);
+    else if (this.mode === 'stage') this._updateStage(kb);
     else if (this.mode === 'player') this._updatePlayer(kb);
     else this._updateAssign(kb);
   },
@@ -290,7 +327,7 @@ phina.define('OptionScene', {
     var up = kb.getKeyDown('up') || kb.getKeyDown('w') || GamepadHub.down(0, 'up');
     var down = kb.getKeyDown('down') || kb.getKeyDown('s') || GamepadHub.down(0, 'down');
     if (up || down) {
-      this.menuIndex = (this.menuIndex + (down ? 1 : -1) + 4) % 4;
+      this.menuIndex = (this.menuIndex + (down ? 1 : -1) + 5) % 5;
       SoundFx.play('ui_move');
       this._refresh();
     }
@@ -306,6 +343,9 @@ phina.define('OptionScene', {
         this.mode = 'cpu';
         this._refresh();
       } else if (this.menuIndex === 3) {
+        this.mode = 'stage';
+        this._refresh();
+      } else if (this.menuIndex === 4) {
         this.exit({ nextLabel: 'title' });
       }
     }
@@ -335,7 +375,7 @@ phina.define('OptionScene', {
     var up = kb.getKeyDown('up') || kb.getKeyDown('w') || GamepadHub.down(0, 'up');
     var down = kb.getKeyDown('down') || kb.getKeyDown('s') || GamepadHub.down(0, 'down');
     if (up || down) {
-      this.cpuIndex = (this.cpuIndex + (down ? 1 : -1) + 4) % 4;
+      this.cpuIndex = (this.cpuIndex + (down ? 1 : -1) + 3) % 3;
       SoundFx.play('ui_move');
       this._refresh();
     }
@@ -349,7 +389,6 @@ phina.define('OptionScene', {
         GAME_OPTIONS.cpuDifficulty = order[(i + (right ? 1 : -1) + 3) % 3];
       } else if (this.cpuIndex === 1) GAME_OPTIONS.cpuShuffle = !GAME_OPTIONS.cpuShuffle;
       else if (this.cpuIndex === 2) GAME_OPTIONS.survivalMode = !GAME_OPTIONS.survivalMode;
-      else GAME_OPTIONS.stageFixed = !GAME_OPTIONS.stageFixed;
       saveGameOptions();
       SoundFx.play('ui_move');
       this._refresh();
@@ -357,6 +396,51 @@ phina.define('OptionScene', {
     if (kb.getKeyDown('escape') || GamepadHub.selectDown()) {
       SoundFx.play('ui_ok');
       this.mode = 'menu';
+      this._refresh();
+    }
+  },
+
+  _updateStage: function (kb) {
+    var up = kb.getKeyDown('up') || kb.getKeyDown('w') || GamepadHub.down(0, 'up');
+    var down = kb.getKeyDown('down') || kb.getKeyDown('s') || GamepadHub.down(0, 'down');
+    if (up || down) {
+      this.stageIndex = ((this.stageIndex || 0) + (down ? 1 : -1) + 2) % 2;
+      SoundFx.play('ui_move');
+      this._refresh();
+    }
+    var left = kb.getKeyDown('left') || kb.getKeyDown('a') || GamepadHub.down(0, 'left');
+    var right = kb.getKeyDown('right') || kb.getKeyDown('d') || GamepadHub.down(0, 'right');
+    if (left || right) {
+      if ((this.stageIndex || 0) === 0) {
+        var list = ['on', 'random'];
+        for (var i = 0; i < STAGE_ROSTER.length; i++) list.push(STAGE_ROSTER[i].id);
+        var cur = GAME_OPTIONS.stageSelect2p || 'random';
+        var idx = list.indexOf(cur);
+        if (idx < 0) idx = 1;
+        idx = (idx + (right ? 1 : -1) + list.length) % list.length;
+        GAME_OPTIONS.stageSelect2p = list[idx];
+      } else {
+        var list2 = ['perChar', 'random'];
+        for (var j = 0; j < STAGE_ROSTER.length; j++) list2.push(STAGE_ROSTER[j].id);
+        var cur2 = GAME_OPTIONS.stageSelectCpu || 'random';
+        var idx2 = list2.indexOf(cur2);
+        if (idx2 < 0) idx2 = 1;
+        idx2 = (idx2 + (right ? 1 : -1) + list2.length) % list2.length;
+        GAME_OPTIONS.stageSelectCpu = list2[idx2];
+      }
+      saveGameOptions();
+      SoundFx.play('ui_move');
+      this._refresh();
+    }
+    if (kb.getKeyDown('escape') || GamepadHub.selectDown()) {
+      SoundFx.play('ui_ok');
+      this.mode = 'menu';
+      if (this.stageLabels) {
+        for (var si = 0; si < this.stageLabels.length; si++) {
+          this.stageLabels[si].hide();
+          this.stageValues[si].hide();
+        }
+      }
       this._refresh();
     }
   },
@@ -492,7 +576,6 @@ phina.define('VersusScene', {
     this.timeLeft = MATCH_TIME;
     this.frame = 0;
     this.hitstop = 0;
-    this.debug = true;
     this.shots = [];
     this.winsNeeded = 2;
     this.p1Wins = (options && options.p1Wins) || 0;
@@ -503,17 +586,23 @@ phina.define('VersusScene', {
     this.cpuQueue = (options && options.cpuQueue) || null;
     this.cpuIndex = (options && options.cpuIndex) || 0;
     this.survival = !!(options && options.survival);
-    this.stageFixed = !!(options && options.stageFixed);
     this.carryHp = options && options.p1Hp;
 
     var p1Data = getCharacter(options && options.p1Id);
     var p2Data = getCharacter(options && options.p2Id);
     this.stageData = (options && options.stageId) ? getStage(options.stageId) : pickRandomStage();
+    this.fixedStageId = options && options.stageId;
+    this.stageMode = options && options.stageMode;
 
     Sprite(this.stageData.image)
       .addChildTo(this)
       .setOrigin(0.5, 0.5)
       .setPosition(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+
+    this.rainDrops = [];
+    if (this.stageData.rain) {
+      this._createRain();
+    }
 
     this.p1 = Fighter({
       name: '1P',
@@ -529,6 +618,7 @@ phina.define('VersusScene', {
       jump: p1Data.stats.jump,
       hp: p1Data.stats.hp,
       moves: mergeMoves(p1Data.moves),
+      debugHitboxes: SHOW_HITBOXES,
     }).addChildTo(this).setPosition(260, GROUND_Y);
     if (this.survival && this.carryHp != null) {
       this.p1.hp = Math.max(1, Math.min(this.p1.maxHp, this.carryHp));
@@ -550,6 +640,7 @@ phina.define('VersusScene', {
       jump: p2Data.stats.jump,
       hp: p2Data.stats.hp,
       moves: mergeMoves(p2Data.moves),
+      debugHitboxes: SHOW_HITBOXES,
     }).addChildTo(this).setPosition(700, GROUND_Y);
     this.p1.opponent = this.p2;
     this.p2.opponent = this.p1;
@@ -710,13 +801,40 @@ phina.define('VersusScene', {
     return bar;
   },
 
+  _createRain: function () {
+    var count = 70;
+    for (var i = 0; i < count; i++) {
+      var drop = RectangleShape({
+        width: 1 + Math.random() * 1.5,
+        height: 8 + Math.random() * 10,
+        fill: 'rgba(180, 210, 255, 0.55)',
+        stroke: null,
+      }).addChildTo(this);
+      drop.x = Math.random() * (SCREEN_WIDTH + 40) - 20;
+      drop.y = Math.random() * SCREEN_HEIGHT;
+      drop.vy = 8 + Math.random() * 6;
+      drop.vx = -1.5 - Math.random() * 1.5;
+      drop.rotation = -12;
+      this.rainDrops.push(drop);
+    }
+  },
+
+  _updateRain: function () {
+    for (var i = 0; i < this.rainDrops.length; i++) {
+      var d = this.rainDrops[i];
+      d.x += d.vx;
+      d.y += d.vy;
+      if (d.y > SCREEN_HEIGHT + 20 || d.x < -40) {
+        d.y = -20 - Math.random() * 40;
+        d.x = Math.random() * (SCREEN_WIDTH + 60) - 20;
+      }
+    }
+  },
+
   update: function (app) {
     GamepadHub.poll();
-    if (app.keyboard.getKeyDown('f9')) {
-      this.debug = !this.debug;
-      this.p1.setDebugVisible(this.debug);
-      this.p2.setDebugVisible(this.debug);
-    }
+
+    if (this.rainDrops.length) this._updateRain();
 
     if (this.fadePhase) {
       this.p1.sleep();
@@ -1114,8 +1232,8 @@ phina.define('VersusScene', {
           cpuQueue: this.cpuQueue,
           cpuIndex: next,
           survival: this.survival,
-          stageFixed: this.stageFixed,
-          stageId: this.stageFixed ? this.stageData.id : null,
+          stageId: this.stageMode === 'perChar' ? ((getCharacter(this.cpuQueue[next]) || {}).stage || null) : (this.fixedStageId || null),
+          stageMode: this.stageMode,
           p1Hp: this.survival ? this.p1.hp : null,
         });
         return;
@@ -1156,6 +1274,77 @@ phina.define('VersusScene', {
     this.introLabel.text = '';
     this.p1.wakeUp();
     this.p2.wakeUp();
+  },
+});
+
+phina.define('StageSelectScene', {
+  superClass: 'DisplayScene',
+
+  init: function (options) {
+    this.superInit(options);
+    this.backgroundColor = '#12151c';
+    this.options = options || {};
+    this.index = 0;
+    this.roster = STAGE_ROSTER;
+
+    Label({
+      text: 'STAGE SELECT',
+      fontSize: 32,
+      fill: '#fff',
+      fontWeight: 'bold',
+    }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 40);
+
+    this.nameLabel = Label({
+      text: '',
+      fontSize: 28,
+      fill: '#ffe08a',
+      fontWeight: 'bold',
+    }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 100);
+
+    this.preview = Sprite(this.roster[0].image)
+      .addChildTo(this)
+      .setPosition(SCREEN_WIDTH / 2, 280);
+    this.preview.width = 480;
+    this.preview.height = 270;
+
+    Label({
+      text: '←→ で選択    SPACE / START で決定',
+      fontSize: 16,
+      fill: '#aaa',
+    }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 500);
+
+    this._refresh();
+  },
+
+  _refresh: function () {
+    var s = this.roster[this.index];
+    this.nameLabel.text = s.name;
+    if (this.preview) this.preview.remove();
+    this.preview = Sprite(s.image)
+      .addChildTo(this)
+      .setPosition(SCREEN_WIDTH / 2, 280);
+    this.preview.width = 480;
+    this.preview.height = 270;
+  },
+
+  update: function (app) {
+    GamepadHub.poll();
+    var kb = app.keyboard;
+    var left = kb.getKeyDown('left') || kb.getKeyDown('a') || GamepadHub.down(0, 'left');
+    var right = kb.getKeyDown('right') || kb.getKeyDown('d') || GamepadHub.down(0, 'right');
+    if (left || right) {
+      var n = this.roster.length;
+      this.index = (this.index + (right ? 1 : -1) + n) % n;
+      SoundFx.play('ui_move');
+      this._refresh();
+    }
+    if (kb.getKeyDown('space') || kb.getKeyDown('g') || GamepadHub.startDown() || GamepadHub.down(0, 'light')) {
+      SoundFx.play('ui_ok');
+      var opts = Object.assign({}, this.options);
+      opts.stageId = this.roster[this.index].id;
+      opts.nextLabel = 'versus';
+      this.exit(opts);
+    }
   },
 });
 

@@ -20,6 +20,7 @@ var CHARACTER_ROSTER = [
     color: '#3dcc66',
     hadou: 'hadou_murata',
     hadouPath: 'assets/image/hadou_murata.png',
+    stage: 'night',
     stats: { speed: 4.2, jump: -14.5, hp: 100 },
   },
   {
@@ -34,6 +35,7 @@ var CHARACTER_ROSTER = [
     color: '#9b59d0',
     hadou: 'hadou_asumi',
     hadouPath: 'assets/image/hadou_asumi.png',
+    stage: 'noon',
     stats: { speed: 4.0, jump: -14.2, hp: 96 },
     moves: {
       kick: { boxW: 84, boxX: 72, damage: 11 },
@@ -54,6 +56,7 @@ var CHARACTER_ROSTER = [
     color: '#ff8a3a',
     hadou: 'hadou_bunbun',
     hadouPath: 'assets/image/hadou_bunbun.png',
+    stage: 'sunset',
     stats: { speed: 4.4, jump: -17.0, hp: 92 },
   },
   {
@@ -68,6 +71,7 @@ var CHARACTER_ROSTER = [
     color: '#e45ab8',
     hadou: 'hadou_midare',
     hadouPath: 'assets/image/hadou_midare.png',
+    stage: 'rain',
     stats: { speed: 5.2, jump: -15.2, hp: 88 },
     moves: {
       light: { damage: 7, startup: 4, recovery: 8 },
@@ -87,6 +91,7 @@ var CHARACTER_ROSTER = [
     color: '#3aa0ff',
     hadou: 'hadou_yasui',
     hadouPath: 'assets/image/hadou_yasui.png',
+    stage: 'dojo',
     stats: { speed: 3.2, jump: -13.0, hp: 125 },
     moves: {
       heavy: { damage: 18, startup: 12, knockback: 8.0 },

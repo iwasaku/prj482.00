@@ -4,6 +4,7 @@ var SCREEN_WIDTH = 960;
 var SCREEN_HEIGHT = 540;
 var GROUND_Y = 460;
 var MATCH_TIME = 60;
+var SHOW_HITBOXES = false;
 
 var ASSETS = SoundFx.collect(collectStageAssets(collectCharacterAssets({
   image: {
@@ -51,6 +52,7 @@ phina.main(function () {
       { className: 'OptionScene', label: 'option', nextLabel: 'title' },
       { className: 'HowToScene', label: 'howto', nextLabel: 'title' },
       { className: 'SelectScene', label: 'select', nextLabel: 'versus' },
+      { className: 'StageSelectScene', label: 'stageselect', nextLabel: 'versus' },
       { className: 'VersusScene', label: 'versus', nextLabel: 'result' },
       { className: 'GameResultScene', label: 'result', nextLabel: 'select' },
     ],
