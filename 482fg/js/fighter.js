@@ -173,6 +173,10 @@ phina.define('Fighter', {
     this.inputRight = false;
     this.crouching = false;
     this.blockstun = 0;
+    this.stun = 0;
+    this.maxStun = 100;
+    this.dizzyTime = 0;
+    this.dizzyDuration = 180;
     this.cmdBuf = [];
     this.queuedShot = null;
     this.inputClock = 0;
@@ -190,6 +194,21 @@ phina.define('Fighter', {
     this.anim = FrameAnimation(this.ssName).attachTo(this);
     this.anim.gotoAndPlay('idle');
     this.currentAnimName = 'idle';
+
+    // ピヨり星
+    this.stars = [];
+    for (var i = 0; i < 3; i++) {
+      var star = phina.display.StarShape({
+        radius: 6,
+        fill: '#ffee55',
+        stroke: '#ffaa00',
+        strokeWidth: 1,
+        sideIndent: 0.5
+      }).addChildTo(this);
+      star.visible = false;
+      this.stars.push(star);
+    }
+    this.starAngle = 0;
 
     this.hurtbox = Hitbox({
       width: 44,
@@ -245,6 +264,11 @@ phina.define('Fighter', {
     this.inputRight = false;
     this.crouching = false;
     this.blockstun = 0;
+    this.stun = 0;
+    this.dizzyTime = 0;
+    if (this.stars) {
+      for (var i = 0; i < this.stars.length; i++) this.stars[i].visible = false;
+    }
     this.cmdBuf = [];
     this.queuedShot = null;
     this.inputClock = 0;
@@ -301,6 +325,22 @@ phina.define('Fighter', {
     this.crouching = false;
     this.holdingDown = false;
     this.playAnim('win');
+  },
+
+  enterDizzy: function () {
+    this.state = 'dizzy';
+    this.stateTime = 0;
+    this.dizzyTime = this.dizzyDuration;
+    this.stun = 0;
+    this.vx = 0;
+    this.vy = 0;
+    this.move = null;
+    this.hasHit = false;
+    this.attackBox.active = false;
+    this.attackBox.visible = false;
+    this.crouching = false;
+    this.playAnim('hit');
+    SoundFx.play('hit');
   },
 
   playAnim: function (name) {
@@ -436,7 +476,7 @@ phina.define('Fighter', {
 
   isGuarding: function () {
     if (!this.alive || !this.onGround) return false;
-    if (this.state === 'attack' || this.state === 'hit' || this.state === 'dead' || this.state === 'throwing' || this.state === 'thrown' || this.state === 'super_cinematic' || this.state === 'super_victim') return false;
+    if (this.state === 'attack' || this.state === 'hit' || this.state === 'dead' || this.state === 'throwing' || this.state === 'thrown' || this.state === 'super_cinematic' || this.state === 'super_victim' || this.state === 'dizzy') return false;
     return this.holdingBack || this.state === 'guard' || this.state === 'blockstun';
   },
 
@@ -493,6 +533,13 @@ phina.define('Fighter', {
     this.attackBox.active = false;
     this.attackBox.visible = false;
     this.crouching = false;
+    // ピヨりゲージ加算
+    var add = move.stun != null ? move.stun : Math.floor((move.damage || 8) * 1.4);
+    this.stun = Math.min(this.maxStun, this.stun + add);
+    if (this.stun >= this.maxStun && this.hp > 0) {
+      this.enterDizzy();
+      return 'dizzy';
+    }
     if (this.hp <= 0) {
       this.alive = false;
       this.state = 'dead';
@@ -614,6 +661,10 @@ phina.define('Fighter', {
   update: function (app) {
     if (this.invuln > 0) this.invuln -= 1;
     this.stateTime += 1;
+    // スタンゲージ減衰（ピヨり中・ヒット中は減衰しない）
+    if (this.state !== 'hit' && this.state !== 'blockstun' && this.state !== 'dizzy' && this.state !== 'thrown') {
+      this.stun = Math.max(0, this.stun - 0.18);
+    }
 
     var kb = app.keyboard;
     if (this.cpu && this.cpuBrain) this.cpuBrain.think(this.opponent, this.shots);
@@ -631,7 +682,7 @@ phina.define('Fighter', {
     this.holdingDown = !!(down && this.onGround);
     this.holdingBack = !!(this.onGround && ((this.facing > 0 && left && !right) || (this.facing < 0 && right && !left)));
     this.inputClock += 1;
-    if (this.onGround && !this.holdingDown && this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'win' && this.state !== 'blockstun' && this.state !== 'attack') {
+    if (this.onGround && !this.holdingDown && this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'win' && this.state !== 'blockstun' && this.state !== 'attack' && this.state !== 'dizzy') {
       if (fwdNow && !this.prevFwd) {
         if (this.inputClock - this.lastFwdTap <= DASH_WINDOW) this.startDash(this.facing);
         this.lastFwdTap = this.inputClock;
@@ -655,7 +706,7 @@ phina.define('Fighter', {
     var throwIpponInput = fwdNow && ((light && heavyHeld) || (heavy && lightHeld));
     var throwTomoeInput = backNow && ((light && heavyHeld) || (heavy && lightHeld));
 
-    if (this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'win' && this.state !== 'blockstun' && this.state !== 'super_cinematic' && this.state !== 'super_victim') {
+    if (this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'win' && this.state !== 'blockstun' && this.state !== 'super_cinematic' && this.state !== 'super_victim' && this.state !== 'dizzy') {
       if (throwIpponInput) {
         this.startMove('throw_ippon');
       } else if (throwTomoeInput) {
@@ -696,6 +747,26 @@ phina.define('Fighter', {
     } else if (this.state === 'hit') {
       if (this.stateTime >= this.hitstun) {
         this.state = this.onGround ? 'idle' : 'jump';
+      }
+    } else if (this.state === 'dizzy') {
+      this.vx = 0;
+      this.vy = 0;
+      this.dizzyTime -= 1;
+      // レバガチャで回復加速（ボタン押しで追加減少）
+      var mash = (light || heavy || kick || kickHeavy || special);
+      if (mash) this.dizzyTime -= 4;
+      this.starAngle += 0.18;
+      for (var si = 0; si < this.stars.length; si++) {
+        var s = this.stars[si];
+        s.visible = true;
+        var ang = this.starAngle + si * 2.1;
+        s.x = Math.cos(ang) * 28;
+        s.y = -110 + Math.sin(ang) * 10;
+      }
+      if (this.dizzyTime <= 0) {
+        this.state = this.onGround ? 'idle' : 'jump';
+        this.stun = 0;
+        for (var si2 = 0; si2 < this.stars.length; si2++) this.stars[si2].visible = false;
       }
     } else if (this.state === 'blockstun') {
       this.vx *= 0.8;
