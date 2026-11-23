@@ -95,7 +95,7 @@ phina.define('HowToScene', {
     }).addChildTo(this).setPosition(this.gridX.center(), 70);
 
     Label({
-      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  G弱P H強P B弱K N強K M必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  8弱P 9強P I弱K O強K P必殺\nパッド: 十字/スティック 移動  Y弱P  X強P  A弱K  B強K  L必殺  START決定\n必殺  前+必殺 波動(67)  後+必殺 竜巻(33)  上+必殺 昇龍(0)  下+必殺 瞬獄殺(100)\n投げ  前+弱強 一本背負い    後+弱強 巴投げ',
+      text: '1P: A/D 移動  W ジャンプ  S しゃがみ  G弱P H強P B弱K N強K M必殺\n2P: ←/→ 移動  ↑ジャンプ  ↓しゃがみ  8弱P 9強P I弱K O強K P必殺\nパッド: 十字/スティック 移動  Y弱P  X強P  A弱K  B強K  L必殺  START決定\n※パッドのボタン配置はOPTIONで変更可能\n必殺  前+必殺 波動(2ゲージ)  後+必殺 竜巻(1ゲージ)  上+必殺 昇龍(0ゲージ)  下+必殺 瞬獄殺(3ゲージ)\n投げ  前+弱or強P 一本背負い    後+弱or強P 巴投げ',
       fontSize: 20,
       fill: '#ddd',
       align: 'center',
