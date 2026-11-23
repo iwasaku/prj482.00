@@ -137,8 +137,8 @@ phina.define('OptionScene', {
     }).addChildTo(this).setPosition(this.gridX.center(), 80);
 
     this.menuLabels = [];
-    var items = ['同担拒否', 'ボタン配置', 'VS CPU', 'ステージ選択', 'タイトルへ戻る'];
-    var itemY = [150, 200, 250, 300, 470];
+    var items = ['同担拒否', 'ボタン配置', 'VS CPU', 'ステージ選択', 'キャッシュ再読み込み', 'タイトルへ戻る'];
+    var itemY = [150, 200, 250, 300, 350, 470];
     for (var i = 0; i < items.length; i++) {
       var lb = Label({
         text: items[i],
@@ -227,9 +227,11 @@ phina.define('OptionScene', {
       this.titleLabel.text = 'OPTION';
       this.subTitle.hide();
       for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
-      this.prompt.text = this.menuIndex === 4
+      this.prompt.text = this.menuIndex === 5
         ? 'SPACE / START でタイトルへ'
-        : 'SPACE / START で開始';
+        : (this.menuIndex === 4
+          ? 'SPACE / START でキャッシュ削除＆再読み込み'
+          : 'SPACE / START で開始');
     } else if (this.mode === 'reject') {
       this.titleLabel.text = '同担拒否';
       this.valueLabel.visible = false;
@@ -327,7 +329,7 @@ phina.define('OptionScene', {
     var up = kb.getKeyDown('up') || kb.getKeyDown('w') || GamepadHub.down(0, 'up');
     var down = kb.getKeyDown('down') || kb.getKeyDown('s') || GamepadHub.down(0, 'down');
     if (up || down) {
-      this.menuIndex = (this.menuIndex + (down ? 1 : -1) + 5) % 5;
+      this.menuIndex = (this.menuIndex + (down ? 1 : -1) + 6) % 6;
       SoundFx.play('ui_move');
       this._refresh();
     }
@@ -346,6 +348,8 @@ phina.define('OptionScene', {
         this.mode = 'stage';
         this._refresh();
       } else if (this.menuIndex === 4) {
+        this._forceReloadCache();
+      } else if (this.menuIndex === 5) {
         this.exit({ nextLabel: 'title' });
       }
     }
@@ -464,6 +468,24 @@ phina.define('OptionScene', {
       SoundFx.play('ui_ok');
       this.mode = 'menu';
       this._refresh();
+    }
+  },
+
+  _forceReloadCache: function () {
+    this.prompt.text = 'キャッシュ削除中...';
+    var done = function () {
+      location.reload(true);
+    };
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        return Promise.all(regs.map(function (r) { return r.unregister(); }));
+      }).then(function () {
+        return caches.keys();
+      }).then(function (keys) {
+        return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+      }).then(done).catch(done);
+    } else {
+      done();
     }
   },
 
