@@ -534,7 +534,7 @@ phina.define('Fighter', {
     this.attackBox.visible = false;
     this.crouching = false;
     // ピヨりゲージ加算
-    var add = move.stun != null ? move.stun : Math.floor((move.damage || 8) * 1.4);
+    var add = move.stun != null ? move.stun : Math.floor((move.damage || 8) * 1.4 * 1.5);
     this.stun = Math.min(this.maxStun, this.stun + add);
     if (this.stun >= this.maxStun && this.hp > 0) {
       this.enterDizzy();

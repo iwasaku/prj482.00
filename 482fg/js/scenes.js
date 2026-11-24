@@ -626,6 +626,18 @@ phina.define('VersusScene', {
       this._createRain();
     }
 
+    // 足元の丸い影
+    this.p1Shadow = CircleShape({
+      radius: 35,
+      fill: 'rgba(0,0,0,1)',
+    }).addChildTo(this).setPosition(260, GROUND_Y - 10);
+    this.p1Shadow.scaleY = 0.26;
+    this.p2Shadow = CircleShape({
+      radius: 35,
+      fill: 'rgba(0,0,0,1)',
+    }).addChildTo(this).setPosition(700, GROUND_Y - 10);
+    this.p2Shadow.scaleY = 0.26;
+
     this.p1 = Fighter({
       name: '1P',
       charaName: p1Data.name,
@@ -855,6 +867,7 @@ phina.define('VersusScene', {
 
   update: function (app) {
     GamepadHub.poll();
+    this._updateShadows();
 
     if (this.rainDrops.length) this._updateRain();
 
@@ -919,6 +932,23 @@ phina.define('VersusScene', {
     var ko = this.p1.hp <= 0 || this.p2.hp <= 0;
     if (ko) this._finish('ko');
     else if (this.timeLeft <= 0) this._finish('time');
+  },
+
+  _updateShadows: function () {
+    if (!this.p1Shadow || !this.p1) return;
+    var maxH = 180;
+    function place(shadow, fighter) {
+      if (!shadow || !fighter) return;
+      shadow.x = fighter.x;
+      shadow.y = GROUND_Y - 10;
+      var h = Math.max(0, GROUND_Y - fighter.y);
+      var s = Math.max(0.35, 1 - h / maxH);
+      shadow.scaleX = s;
+      shadow.scaleY = 0.26 * s;
+      shadow.alpha = Math.max(0.15, 0.35 * (1 - h / maxH * 0.5));
+    }
+    place(this.p1Shadow, this.p1);
+    place(this.p2Shadow, this.p2);
   },
 
   _separate: function () {
