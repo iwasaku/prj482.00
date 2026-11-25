@@ -542,6 +542,9 @@ phina.define('Fighter', {
       return true;
     }
     if (move && move.throw) {
+      if (this.state === 'dizzy' && this.stars) {
+        for (var si = 0; si < this.stars.length; si++) this.stars[si].visible = false;
+      }
       this.state = 'thrown';
       this.stateTime = 0;
       this.throwHold = 18;
@@ -561,6 +564,9 @@ phina.define('Fighter', {
     this.vx = dir * move.knockback;
     this.vy = -2.4;
     this.onGround = false;
+    if (this.state === 'dizzy' && this.stars) {
+      for (var si = 0; si < this.stars.length; si++) this.stars[si].visible = false;
+    }
     this.state = 'hit';
     this.stateTime = 0;
     this.hitstun = move.hitstun;

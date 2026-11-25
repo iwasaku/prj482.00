@@ -41,6 +41,8 @@ phina.define('GameTitleScene', {
         fontSize: 36,
         fill: '#888',
         fontWeight: 'bold',
+        stroke: '#000',
+        strokeWidth: 5,
       }).addChildTo(this).setPosition(this.gridX.center(), 210 + i * 48);
       lb.hide();
       this.modeLabels.push(lb);
@@ -87,7 +89,7 @@ phina.define('GameTitleScene', {
 
     if (any) this.idleFrames = 0;
     else this.idleFrames += 1;
-    if (this.idleFrames >= 30 * 60) {
+    if (this.idleFrames >= 15 * 60) {
       this.exit({ nextLabel: 'demo', demo: true });
       return;
     }
