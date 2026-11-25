@@ -9,6 +9,7 @@ var SHOW_HITBOXES = false;
 var ASSETS = SoundFx.collect(collectStageAssets(collectCharacterAssets({
   image: {
     hadou: 'assets/image/hadou.png',
+    title: 'assets/image/title.png',
   },
   spritesheet: {
     fighter_ss: 'assets/spritesheet/fighter.json',
@@ -54,6 +55,7 @@ phina.main(function () {
       { className: 'SelectScene', label: 'select', nextLabel: 'versus' },
       { className: 'StageSelectScene', label: 'stageselect', nextLabel: 'versus' },
       { className: 'VersusScene', label: 'versus', nextLabel: 'result' },
+      { className: 'VersusScene', label: 'demo', nextLabel: 'title' },
       { className: 'GameResultScene', label: 'result', nextLabel: 'select' },
     ],
   });
