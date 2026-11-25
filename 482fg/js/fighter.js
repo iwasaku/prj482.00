@@ -227,20 +227,12 @@ phina.define('Fighter', {
     this.attackBox.visible = false;
     this.attackBox.active = false;
 
-    this.nameLabel = Label({
-      text: this.name,
-      fontSize: 14,
-      fill: '#fff',
-      fontWeight: 'bold',
-    }).addChildTo(this);
-    this.nameLabel.setPosition(0, -118);
     this.applyFacing();
     if (this.cpuBrain) this.cpuBrain.reset();
   },
 
   applyFacing: function () {
     this.scaleX = this.facing >= 0 ? 1 : -1;
-    if (this.nameLabel) this.nameLabel.scaleX = this.scaleX;
   },
 
   resetRound: function (x, facing) {
@@ -851,7 +843,7 @@ phina.define('Fighter', {
     this.x = Math.clamp(this.x, margin, SCREEN_WIDTH - margin);
 
     this.scaleX = this.facing >= 0 ? 1 : -1;
-    this.nameLabel.scaleX = this.scaleX;
+    // nameLabel removed
 
     this.alpha = (this.invuln > 0 && this.alive && this.stateTime % 4 < 2) ? 0.55 : 1;
     this._syncAnim();
