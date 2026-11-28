@@ -1211,10 +1211,16 @@ phina.define('VersusScene', {
     this.superSparks = [];
     this.superOverlay.show();
     this.superOverlay.alpha = 0.82;
-    SoundFx.play('shoryu');
   },
 
   _spawnSuperSpark: function () {
+    var cin = this.cinematic;
+    var ax = cin && cin.attacker ? cin.attacker.x : SCREEN_WIDTH / 2;
+    var ay = cin && cin.attacker ? (cin.attacker.y - 80) : 250;
+    var dx = cin && cin.defender ? cin.defender.x : ax;
+    var dy = cin && cin.defender ? (cin.defender.y - 80) : ay;
+    var cx = (ax + dx) / 2;
+    var cy = (ay + dy) / 2;
     var spark = RectangleShape({
       width: 16 + Math.random() * 28,
       height: 5 + Math.random() * 10,
@@ -1222,8 +1228,8 @@ phina.define('VersusScene', {
       stroke: null,
     }).addChildTo(this);
     spark.setPosition(
-      SCREEN_WIDTH / 2 + (Math.random() - 0.5) * 140,
-      250 + (Math.random() - 0.5) * 90
+      cx + (Math.random() - 0.5) * 120,
+      cy + (Math.random() - 0.5) * 100
     );
     spark.rotation = Math.random() * 180;
     spark.life = 7;
