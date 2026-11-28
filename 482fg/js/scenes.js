@@ -737,7 +737,8 @@ phina.define('VersusScene', {
     this.stageData = (options && options.stageId) ? getStage(options.stageId) : pickRandomStage();
     this.fixedStageId = options && options.stageId;
     this.stageMode = options && options.stageMode;
-    SoundFx.playBgm(this.stageData.image);
+    if (this.demo) SoundFx.stopBgm();
+    else SoundFx.playBgm(this.stageData.image);
 
     Sprite(this.stageData.image)
       .addChildTo(this)
@@ -1131,10 +1132,28 @@ phina.define('VersusScene', {
 
   _updateShots: function () {
     var self = this;
-    this.shots = this.shots.filter(function (shot) {
-      if (!shot.parent) return false;
+    var list = this.shots;
+    for (var i = 0; i < list.length; i++) {
+      var a = list[i];
+      if (!a.parent || a.hasHit) continue;
+      for (var j = i + 1; j < list.length; j++) {
+        var b = list[j];
+        if (!b.parent || b.hasHit) continue;
+        if (a.owner === b.owner) continue;
+        if (aabbOverlap(a.getRect(), b.getRect())) {
+          a.hasHit = true;
+          b.hasHit = true;
+          a.remove();
+          b.remove();
+          SoundFx.play('block');
+          break;
+        }
+      }
+    }
+    this.shots = list.filter(function (shot) {
+      if (!shot.parent || shot.hasHit) return false;
       var defender = shot.owner === self.p1 ? self.p2 : self.p1;
-      if (!shot.hasHit && defender.alive && aabbOverlap(shot.getRect(), defender.hurtbox.getRect())) {
+      if (defender.alive && aabbOverlap(shot.getRect(), defender.hurtbox.getRect())) {
         var result = defender.takeHit(shot.move, shot.facing);
         if (result) {
           shot.hasHit = true;
@@ -1420,6 +1439,8 @@ phina.define('VersusScene', {
           return;
         }
         this._nextRound();
+        this.p1.sleep();
+        this.p2.sleep();
         this.fadePhase = 'in';
         this.fadeAlpha = 1;
         this.fadeOverlay.alpha = 1;
