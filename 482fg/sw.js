@@ -1,4 +1,4 @@
-const CACHE_NAME = '482-fighter-v21';
+const CACHE_NAME = '482-fighter-v22';
 
 const PRECACHE = [
   './',
@@ -62,6 +62,11 @@ const PRECACHE = [
   './assets/sound/ui_ready.mp3',
   './assets/sound/whoosh.mp3',
   './assets/sound/whoosh_heavy.mp3',
+  './assets/sound/stage_nishieifuku.mp3',
+  './assets/sound/stage_ootsuka.mp3',
+  './assets/sound/stage_shibuya.mp3',
+  './assets/sound/stage_shimokitazawa.mp3',
+  './assets/sound/stage_shinjuku.mp3',
 ];
 
 self.addEventListener('install', function (event) {

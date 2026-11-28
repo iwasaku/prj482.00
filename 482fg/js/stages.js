@@ -58,6 +58,7 @@ function collectStageAssets(assets) {
   assets.sound = assets.sound || {};
   STAGE_ROSTER.forEach(function (stage) {
     assets.image[stage.image] = stage.imagePath || ('assets/image/' + stage.image + '.png');
+    assets.sound[stage.image] = 'assets/sound/' + stage.image + '.mp3';
   });
   return assets;
 }

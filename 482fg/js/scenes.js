@@ -182,8 +182,8 @@ phina.define('OptionScene', {
     }).addChildTo(this).setPosition(this.gridX.center(), 80);
 
     this.menuLabels = [];
-    var items = ['同担拒否', 'ボタン配置', 'VS CPU', 'ステージ選択', 'ラウンド時間', 'キャッシュ再読み込み', 'タイトルへ戻る'];
-    var itemY = [140, 185, 230, 275, 320, 365, 470];
+    var items = ['同担拒否', 'ボタン配置', 'VS CPU', 'ステージ選択', 'ラウンド時間', 'BGM', 'キャッシュ再読み込み', 'タイトルへ戻る'];
+    var itemY = [140, 180, 220, 260, 300, 340, 380, 470];
     for (var i = 0; i < items.length; i++) {
       var lb = Label({
         text: items[i],
@@ -272,9 +272,9 @@ phina.define('OptionScene', {
       this.titleLabel.text = 'OPTION';
       this.subTitle.hide();
       for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
-      this.prompt.text = this.menuIndex === 6
+      this.prompt.text = this.menuIndex === 7
         ? 'SPACE / START でタイトルへ'
-        : (this.menuIndex === 5
+        : (this.menuIndex === 6
           ? 'SPACE / START でキャッシュ削除＆再読み込み'
           : 'SPACE / START で開始');
     } else if (this.mode === 'roundtime') {
@@ -342,6 +342,14 @@ phina.define('OptionScene', {
         this.stageValues[si].fill = on ? '#ffe08a' : '#aaa';
       }
       this.prompt.text = '↑↓ で選択  ←→ で切り替え    ESC / SELECT で戻る';
+    } else if (this.mode === 'bgm') {
+      this.titleLabel.text = 'BGM';
+      this.valueLabel.visible = false;
+      this.subTitle.show();
+      this.subTitle.text = GAME_OPTIONS.bgm ? 'ON' : 'OFF';
+      this.subTitle.fill = GAME_OPTIONS.bgm ? '#3aa0ff' : '#ff8a3a';
+      for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
+      this.prompt.text = '←→ で切り替え    ESC / SELECT で戻る';
     } else if (this.mode === 'player') {
       this.titleLabel.text = 'ボタン配置';
       this.valueLabel.visible = false;
@@ -375,6 +383,7 @@ phina.define('OptionScene', {
     else if (this.mode === 'reject') this._updateReject(kb);
     else if (this.mode === 'cpu') this._updateCpu(kb);
     else if (this.mode === 'stage') this._updateStage(kb);
+    else if (this.mode === 'bgm') this._updateBgm(kb);
     else if (this.mode === 'player') this._updatePlayer(kb);
     else this._updateAssign(kb);
   },
@@ -383,7 +392,7 @@ phina.define('OptionScene', {
     var up = kb.getKeyDown('up') || kb.getKeyDown('w') || GamepadHub.down(0, 'up');
     var down = kb.getKeyDown('down') || kb.getKeyDown('s') || GamepadHub.down(0, 'down');
     if (up || down) {
-      this.menuIndex = (this.menuIndex + (down ? 1 : -1) + 7) % 7;
+      this.menuIndex = (this.menuIndex + (down ? 1 : -1) + 8) % 8;
       SoundFx.play('ui_move');
       this._refresh();
     }
@@ -405,8 +414,11 @@ phina.define('OptionScene', {
         this.mode = 'roundtime';
         this._refresh();
       } else if (this.menuIndex === 5) {
-        this._forceReloadCache();
+        this.mode = 'bgm';
+        this._refresh();
       } else if (this.menuIndex === 6) {
+        this._forceReloadCache();
+      } else if (this.menuIndex === 7) {
         this.exit({ nextLabel: 'title' });
       }
     }
@@ -425,6 +437,23 @@ phina.define('OptionScene', {
       if (i < 0) i = 1;
       GAME_OPTIONS.roundTime = order[(i + (right ? 1 : -1) + order.length) % order.length];
       saveGameOptions();
+      SoundFx.play('ui_move');
+      this._refresh();
+    }
+    if (kb.getKeyDown('escape') || GamepadHub.selectDown()) {
+      SoundFx.play('ui_ok');
+      this.mode = 'menu';
+      this._refresh();
+    }
+  },
+
+  _updateBgm: function (kb) {
+    var left = kb.getKeyDown('left') || kb.getKeyDown('a') || GamepadHub.down(0, 'left');
+    var right = kb.getKeyDown('right') || kb.getKeyDown('d') || GamepadHub.down(0, 'right');
+    if (left || right) {
+      GAME_OPTIONS.bgm = !GAME_OPTIONS.bgm;
+      saveGameOptions();
+      if (!GAME_OPTIONS.bgm) SoundFx.stopBgm();
       SoundFx.play('ui_move');
       this._refresh();
     }
@@ -708,6 +737,7 @@ phina.define('VersusScene', {
     this.stageData = (options && options.stageId) ? getStage(options.stageId) : pickRandomStage();
     this.fixedStageId = options && options.stageId;
     this.stageMode = options && options.stageMode;
+    SoundFx.playBgm(this.stageData.image);
 
     Sprite(this.stageData.image)
       .addChildTo(this)
@@ -926,6 +956,11 @@ phina.define('VersusScene', {
     for (i = 0; i < this.p2WinMarks.dots.length; i++) {
       this.p2WinMarks.dots[i].fill = i < this.p2Wins ? '#ff8a3a' : '#222';
     }
+  },
+
+  exit: function (params) {
+    SoundFx.stopBgm();
+    this.superMethod('exit', params);
   },
 
   _bar: function (x, y, w, color, originX) {

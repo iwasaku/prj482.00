@@ -43,6 +43,7 @@ var SoundFx = {
     action: 0.7,
     hit: 0.85,
     voice: 0.8,
+    bgm: 0.4,
   },
   groupOf: {
     ui_move: 'ui',
@@ -96,7 +97,33 @@ var SoundFx = {
 
   toggleMute: function () {
     this.muted = !this.muted;
+    if (this.muted) this.stopBgm();
+    else if (this.bgmName) this.playBgm(this.bgmName);
     return this.muted;
+  },
+
+  stopBgm: function () {
+    if (this.bgm) {
+      try { this.bgm.stop(); } catch (e) { /* ignore */ }
+      this.bgm = null;
+    }
+  },
+
+  playBgm: function (name) {
+    this.bgmName = name || null;
+    this.stopBgm();
+    if (this.muted || !name || (typeof GAME_OPTIONS !== 'undefined' && GAME_OPTIONS.bgm === false)) return;
+    this.unlock();
+    var asset = typeof AssetManager !== 'undefined' ? AssetManager.get('sound', name) : null;
+    if (!asset) return;
+    var inst = asset.clone ? asset.clone() : asset;
+    inst.loop = true;
+    var vol = this.master * (this.groups.bgm != null ? this.groups.bgm : 0.4);
+    inst.volume = Math.max(0, Math.min(1, vol));
+    try {
+      inst.play();
+      this.bgm = inst;
+    } catch (e) { /* ignore */ }
   },
 
   play: function (name, opt) {
