@@ -675,9 +675,15 @@ phina.define('SuperGauge', {
     this.value = Math.max(0, Math.min(this.max, v == null ? 0 : v));
   },
 
+  flashDeny: function () {
+    this.denyT = 10;
+  },
+
   update: function () {
     this.blinkT += 0.14;
     var pulse = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(this.blinkT));
+    var deny = this.denyT > 0;
+    if (deny) this.denyT -= 1;
     for (var i = 0; i < this.levels; i++) {
       var start = Math.round(i * this.max / this.levels);
       var end = Math.round((i + 1) * this.max / this.levels);
@@ -687,6 +693,7 @@ phina.define('SuperGauge', {
       var seg = this.segments[i];
       seg.fill.width = Math.max(0.001, (this.segW - 2) * ratio);
       seg.fill.alpha = full ? pulse : 1;
+      seg.bg.fill = (deny && (this.denyT % 4 < 2)) ? '#ff4040' : this.emptyColor;
     }
   },
 });
@@ -928,6 +935,40 @@ phina.define('VersusScene', {
     this.superOverlay.alpha = 0;
     this.superOverlay.hide();
 
+    this.inputLabels = { p1: [], p2: [] };
+    this.inputHeader = Label({
+      text: 'INPUT F9',
+      fontSize: 12,
+      fill: '#888',
+      stroke: '#000',
+      strokeWidth: 3,
+    }).addChildTo(this).setPosition(SCREEN_WIDTH / 2, 120);
+    this.inputHeader.hide();
+    for (var il = 0; il < 12; il++) {
+      var lp1 = Label({
+        text: '',
+        fontSize: 13,
+        fill: '#3aa0ff',
+        align: 'left',
+        stroke: '#000',
+        strokeWidth: 3,
+      }).addChildTo(this).setPosition(12, 140 + il * 16);
+      lp1.origin.set(0, 0.5);
+      lp1.hide();
+      this.inputLabels.p1.push(lp1);
+      var lp2 = Label({
+        text: '',
+        fontSize: 13,
+        fill: '#ff8a3a',
+        align: 'right',
+        stroke: '#000',
+        strokeWidth: 3,
+      }).addChildTo(this).setPosition(SCREEN_WIDTH - 12, 140 + il * 16);
+      lp2.origin.set(1, 0.5);
+      lp2.hide();
+      this.inputLabels.p2.push(lp2);
+    }
+
     this._refreshWinMarks();
     this._startIntro();
   },
@@ -995,6 +1036,22 @@ phina.define('VersusScene', {
     }
   },
 
+  _updateInputHistory: function () {
+    var on = typeof SHOW_INPUT_HISTORY !== 'undefined' && SHOW_INPUT_HISTORY;
+    this.inputHeader.visible = on;
+    var sides = [{ key: 'p1', f: this.p1 }, { key: 'p2', f: this.p2 }];
+    for (var s = 0; s < sides.length; s++) {
+      var labels = this.inputLabels[sides[s].key];
+      var log = (sides[s].f && sides[s].f.inputLog) || [];
+      for (var i = 0; i < labels.length; i++) {
+        labels[i].visible = on;
+        if (!on) continue;
+        var idx = log.length - labels.length + i;
+        labels[i].text = idx >= 0 ? (log[idx].text || log[idx]) : '';
+      }
+    }
+  },
+
   _updateRain: function () {
     for (var i = 0; i < this.rainDrops.length; i++) {
       var d = this.rainDrops[i];
@@ -1009,6 +1066,7 @@ phina.define('VersusScene', {
 
   update: function (app) {
     GamepadHub.poll();
+    this._updateInputHistory();
     if (this.demo) {
       var kb = app.keyboard;
       var any = kb.getKeyDown('space') || GamepadHub.startDown() ||
@@ -1349,6 +1407,8 @@ phina.define('VersusScene', {
     this.p2Bar.width = Math.max(0.001, this.hpBarWidth * (this.p2.hp / this.p2.maxHp));
     this.p1Gauge.setValue(this.p1.gauge);
     this.p2Gauge.setValue(this.p2.gauge);
+    if (this.p1.gaugeDeny > 0) { this.p1Gauge.flashDeny(); this.p1.gaugeDeny = 0; }
+    if (this.p2.gaugeDeny > 0) { this.p2Gauge.flashDeny(); this.p2.gaugeDeny = 0; }
     this.timerLabel.text = (GAME_OPTIONS.roundTime === 'unlimited') ? '∞' : String(Math.max(0, this.timeLeft));
   },
 

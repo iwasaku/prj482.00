@@ -5,6 +5,7 @@ var SCREEN_HEIGHT = 540;
 var GROUND_Y = 460;
 var MATCH_TIME = 60;
 var SHOW_HITBOXES = false;
+var SHOW_INPUT_HISTORY = false;
 
 var ASSETS = SoundFx.collect(collectStageAssets(collectCharacterAssets({
   image: {
@@ -61,6 +62,7 @@ phina.main(function () {
   });
   app.on('enterframe', function () {
     if (app.keyboard.getKeyDown('f8')) SoundFx.toggleMute();
+    if (app.keyboard.getKeyDown('f9')) SHOW_INPUT_HISTORY = !SHOW_INPUT_HISTORY;
   });
   app.run();
 });

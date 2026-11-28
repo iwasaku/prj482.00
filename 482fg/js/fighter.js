@@ -125,6 +125,8 @@ var COMMANDS = [
 ];
 
 var CMD_BUFFER = 20;
+var SPECIAL_DIR_WINDOW = 8;
+var SHORYU_JUMP_WINDOW = 6;
 var DASH_WINDOW = 14;
 var DASH_FWD_SPEED = 11;
 var DASH_BACK_SPEED = 9.5;
@@ -160,6 +162,7 @@ phina.define('Fighter', {
     this.vx = 0;
     this.vy = 0;
     this.onGround = true;
+    this.jumpTime = 0;
     this.state = 'idle';
     this.stateTime = 0;
     this.invuln = 0;
@@ -178,6 +181,8 @@ phina.define('Fighter', {
     this.dizzyTime = 0;
     this.dizzyDuration = 180;
     this.cmdBuf = [];
+    this.gaugeDeny = 0;
+    this.inputLog = [];
     this.queuedShot = null;
     this.inputClock = 0;
     this.lastFwdTap = -999;
@@ -242,6 +247,7 @@ phina.define('Fighter', {
     this.vx = 0;
     this.vy = 0;
     this.onGround = true;
+    this.jumpTime = 0;
     this.state = 'idle';
     this.stateTime = 0;
     this.invuln = 0;
@@ -262,6 +268,8 @@ phina.define('Fighter', {
       for (var i = 0; i < this.stars.length; i++) this.stars[i].visible = false;
     }
     this.cmdBuf = [];
+    this.gaugeDeny = 0;
+    this.inputLog = [];
     this.queuedShot = null;
     this.inputClock = 0;
     this.lastFwdTap = -999;
@@ -406,24 +414,76 @@ phina.define('Fighter', {
     return false;
   },
 
+  _recordInput: function (left, right, down, up, light, heavy, kick, kickHeavy, special) {
+    var dir = '';
+    if (up) dir += '↑';
+    if (down) dir += '↓';
+    if (left) dir += '←';
+    if (right) dir += '→';
+    if (!dir) dir = '・';
+    var btns = '';
+    if (light) btns += '弱P ';
+    if (heavy) btns += '強P ';
+    if (kick) btns += '弱K ';
+    if (kickHeavy) btns += '強K ';
+    if (special) btns += '必 ';
+    var key = dir + '|' + btns;
+    var last = this.inputLog[this.inputLog.length - 1];
+    if (last && last.key === key) {
+      if (dir === '・' && !btns && last.frames >= 99) return;
+      last.frames += 1;
+      last.text = dir + (btns ? ' ' + btns.trim() : '') + '  ' + last.frames;
+      return;
+    }
+    this.inputLog.push({
+      key: key,
+      frames: 1,
+      text: dir + (btns ? ' ' + btns.trim() : '') + '  1',
+    });
+    if (this.inputLog.length > 12) this.inputLog.shift();
+  },
+
   trySpecial: function (upHeld, fwd, back, down) {
-    if (!this.canAct() || this.state === 'jump' || !this.onGround) return false;
-    var dir = null;
-    if (down) dir = 'down';
-    else if (upHeld) dir = 'up';
-    else if (fwd) dir = 'forward';
-    else if (back) dir = 'back';
+    var dir = this._specialDir(upHeld, fwd, back, down);
+    var earlyShoryu = dir === 'up' && !this.onGround && this.jumpTime > 0 && this.jumpTime <= SHORYU_JUMP_WINDOW;
+    if (!this.canAct()) return false;
+    if ((this.state === 'jump' || !this.onGround) && !earlyShoryu) return false;
     if (!dir) return false;
     for (var i = 0; i < COMMANDS.length; i++) {
       var cmd = COMMANDS[i];
       if (cmd.dir !== dir) continue;
       if (!this.moves[cmd.move]) continue;
-      if (cmd.gauge && !this.canSpendGauge(cmd.gauge)) continue;
+      if (cmd.gauge && !this.canSpendGauge(cmd.gauge)) {
+        this.gaugeDeny = 12;
+        SoundFx.play('ui_move');
+        return false;
+      }
       this.cmdBuf = [];
       this.startMove(cmd.move, true);
       return true;
     }
     return false;
+  },
+
+  _specialDir: function (upHeld, fwd, back, down) {
+    if (down) return 'down';
+    if (upHeld) return 'up';
+    if (fwd) return 'forward';
+    if (back) return 'back';
+    var start = Math.max(0, this.cmdBuf.length - SPECIAL_DIR_WINDOW);
+    for (var i = this.cmdBuf.length - 1; i >= start; i--) {
+      var off = this.cmdBuf[i] - 5;
+      if (!off) continue;
+      var y = 0;
+      if (off >= 2) y = 1;
+      else if (off <= -2) y = -1;
+      var x = off - 3 * y;
+      if (y < 0) return 'down';
+      if (y > 0) return 'up';
+      if (x > 0) return 'forward';
+      if (x < 0) return 'back';
+    }
+    return null;
   },
 
   startMove: function (kind, fromCommand) {
@@ -435,7 +495,7 @@ phina.define('Fighter', {
     }
     var data = this.moves[kind];
     if (!data || !this.canAct()) return;
-    if (this.state === 'jump') return;
+    if (this.state === 'jump' && kind !== 'shoryu') return;
     if (data.gaugeCost && !this.spendGauge(data.gaugeCost)) return;
     this.state = 'attack';
     this.stateTime = 0;
@@ -693,31 +753,37 @@ phina.define('Fighter', {
     this.prevFwd = fwdNow;
     this.prevBack = backNow;
 
-    var light = this.cpu ? !!this.cpuLight : (this._justPressed(kb, this.keys.light) || GamepadHub.down(this.padIndex, 'light'));
-    var heavy = this.cpu ? !!this.cpuHeavy : (this._justPressed(kb, this.keys.heavy) || GamepadHub.down(this.padIndex, 'heavy'));
-    var kick = this.cpu ? !!this.cpuKick : (this._justPressed(kb, this.keys.kick) || GamepadHub.down(this.padIndex, 'kick'));
-    var kickHeavy = this.cpu ? !!this.cpuKickHeavy : (this._justPressed(kb, this.keys.kickHeavy) || GamepadHub.down(this.padIndex, 'kickHeavy'));
-    var special = this.cpu ? !!this.cpuSpecial : (this._justPressed(kb, this.keys.special) || GamepadHub.down(this.padIndex, 'special'));
+    var light = this.cpu ? !!this.cpuLight : (this._pressed(kb, this.keys.light) || GamepadHub.held(this.padIndex, 'light'));
+    var heavy = this.cpu ? !!this.cpuHeavy : (this._pressed(kb, this.keys.heavy) || GamepadHub.held(this.padIndex, 'heavy'));
+    var kick = this.cpu ? !!this.cpuKick : (this._pressed(kb, this.keys.kick) || GamepadHub.held(this.padIndex, 'kick'));
+    var kickHeavy = this.cpu ? !!this.cpuKickHeavy : (this._pressed(kb, this.keys.kickHeavy) || GamepadHub.held(this.padIndex, 'kickHeavy'));
+    var special = this.cpu ? !!this.cpuSpecial : (this._pressed(kb, this.keys.special) || GamepadHub.held(this.padIndex, 'special'));
+    var lightDown = this.cpu ? !!this.cpuLight : (this._justPressed(kb, this.keys.light) || GamepadHub.down(this.padIndex, 'light'));
+    var heavyDown = this.cpu ? !!this.cpuHeavy : (this._justPressed(kb, this.keys.heavy) || GamepadHub.down(this.padIndex, 'heavy'));
+    var kickDown = this.cpu ? !!this.cpuKick : (this._justPressed(kb, this.keys.kick) || GamepadHub.down(this.padIndex, 'kick'));
+    var kickHeavyDown = this.cpu ? !!this.cpuKickHeavy : (this._justPressed(kb, this.keys.kickHeavy) || GamepadHub.down(this.padIndex, 'kickHeavy'));
+    var specialDown = this.cpu ? !!this.cpuSpecial : (this._justPressed(kb, this.keys.special) || GamepadHub.down(this.padIndex, 'special'));
+    this._recordInput(left, right, down, upHeld, light, heavy, kick, kickHeavy, special);
     var lightHeld = this.cpu ? !!this.cpuLightHeld : (this._pressed(kb, this.keys.light) || GamepadHub.held(this.padIndex, 'light'));
     var heavyHeld = this.cpu ? !!this.cpuHeavyHeld : (this._pressed(kb, this.keys.heavy) || GamepadHub.held(this.padIndex, 'heavy'));
 
-    var throwIpponInput = fwdNow && ((light && heavyHeld) || (heavy && lightHeld));
-    var throwTomoeInput = backNow && ((light && heavyHeld) || (heavy && lightHeld));
+    var throwIpponInput = fwdNow && ((lightDown && heavy) || (heavyDown && light));
+    var throwTomoeInput = backNow && ((lightDown && heavy) || (heavyDown && light));
 
     if (this.alive && this.state !== 'hit' && this.state !== 'dead' && this.state !== 'win' && this.state !== 'blockstun' && this.state !== 'super_cinematic' && this.state !== 'super_victim' && this.state !== 'dizzy') {
       if (throwIpponInput) {
         this.startMove('throw_ippon');
       } else if (throwTomoeInput) {
         this.startMove('throw_tomoe');
-      } else if (special) {
+      } else if (specialDown) {
         this.trySpecial(upHeld, fwdNow, backNow, down);
-      } else if (light) {
+      } else if (lightDown) {
         this.startMove('light');
-      } else if (heavy) {
+      } else if (heavyDown) {
         this.startMove('heavy');
-      } else if (kick) {
+      } else if (kickDown) {
         this.startMove('kick');
-      } else if (kickHeavy) {
+      } else if (kickHeavyDown) {
         this.startMove('kick_heavy');
       }
     }
@@ -751,7 +817,7 @@ phina.define('Fighter', {
       this.vy = 0;
       this.dizzyTime -= 1;
       // レバガチャで回復加速（ボタン押しで追加減少）
-      var mash = (light || heavy || kick || kickHeavy || special);
+      var mash = (lightDown || heavyDown || kickDown || kickHeavyDown || specialDown);
       if (mash) this.dizzyTime -= 4;
       this.starAngle += 0.18;
       for (var si = 0; si < this.stars.length; si++) {
@@ -838,10 +904,12 @@ phina.define('Fighter', {
       this.y = GROUND_Y;
       this.vy = 0;
       this.onGround = true;
+      this.jumpTime = 0;
       if (this.state === 'jump') this.state = 'idle';
       if (landed && this.alive && this.state !== 'dead') SoundFx.play('land');
     } else {
       this.onGround = false;
+      this.jumpTime += 1;
       this.crouching = false;
     }
 
