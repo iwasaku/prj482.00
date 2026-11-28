@@ -182,8 +182,8 @@ phina.define('OptionScene', {
     }).addChildTo(this).setPosition(this.gridX.center(), 80);
 
     this.menuLabels = [];
-    var items = ['同担拒否', 'ボタン配置', 'VS CPU', 'ステージ選択', 'キャッシュ再読み込み', 'タイトルへ戻る'];
-    var itemY = [150, 200, 250, 300, 350, 470];
+    var items = ['同担拒否', 'ボタン配置', 'VS CPU', 'ステージ選択', 'ラウンド時間', 'キャッシュ再読み込み', 'タイトルへ戻る'];
+    var itemY = [140, 185, 230, 275, 320, 365, 470];
     for (var i = 0; i < items.length; i++) {
       var lb = Label({
         text: items[i],
@@ -272,11 +272,19 @@ phina.define('OptionScene', {
       this.titleLabel.text = 'OPTION';
       this.subTitle.hide();
       for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
-      this.prompt.text = this.menuIndex === 5
+      this.prompt.text = this.menuIndex === 6
         ? 'SPACE / START でタイトルへ'
-        : (this.menuIndex === 4
+        : (this.menuIndex === 5
           ? 'SPACE / START でキャッシュ削除＆再読み込み'
           : 'SPACE / START で開始');
+    } else if (this.mode === 'roundtime') {
+      this.titleLabel.text = 'ラウンド時間';
+      this.subTitle.show();
+      var rt = GAME_OPTIONS.roundTime;
+      this.subTitle.text = (rt === 'unlimited') ? '∞' : String(rt);
+      this.subTitle.fill = '#ffe08a';
+      for (var r = 0; r < this.roleLabels.length; r++) this.roleLabels[r].hide();
+      this.prompt.text = '←→ で切り替え    ESC / SELECT で戻る';
     } else if (this.mode === 'reject') {
       this.titleLabel.text = '同担拒否';
       this.valueLabel.visible = false;
@@ -363,6 +371,7 @@ phina.define('OptionScene', {
     GamepadHub.poll();
     var kb = app.keyboard;
     if (this.mode === 'menu') this._updateMenu(kb);
+    else if (this.mode === 'roundtime') this._updateRoundTime(kb);
     else if (this.mode === 'reject') this._updateReject(kb);
     else if (this.mode === 'cpu') this._updateCpu(kb);
     else if (this.mode === 'stage') this._updateStage(kb);
@@ -374,7 +383,7 @@ phina.define('OptionScene', {
     var up = kb.getKeyDown('up') || kb.getKeyDown('w') || GamepadHub.down(0, 'up');
     var down = kb.getKeyDown('down') || kb.getKeyDown('s') || GamepadHub.down(0, 'down');
     if (up || down) {
-      this.menuIndex = (this.menuIndex + (down ? 1 : -1) + 6) % 6;
+      this.menuIndex = (this.menuIndex + (down ? 1 : -1) + 7) % 7;
       SoundFx.play('ui_move');
       this._refresh();
     }
@@ -393,14 +402,36 @@ phina.define('OptionScene', {
         this.mode = 'stage';
         this._refresh();
       } else if (this.menuIndex === 4) {
-        this._forceReloadCache();
+        this.mode = 'roundtime';
+        this._refresh();
       } else if (this.menuIndex === 5) {
+        this._forceReloadCache();
+      } else if (this.menuIndex === 6) {
         this.exit({ nextLabel: 'title' });
       }
     }
     if (kb.getKeyDown('escape')) {
       SoundFx.play('ui_ok');
       this.exit({ nextLabel: 'title' });
+    }
+  },
+
+  _updateRoundTime: function (kb) {
+    var left = kb.getKeyDown('left') || kb.getKeyDown('a') || GamepadHub.down(0, 'left');
+    var right = kb.getKeyDown('right') || kb.getKeyDown('d') || GamepadHub.down(0, 'right');
+    if (left || right) {
+      var order = [30, 60, 99, 'unlimited'];
+      var i = order.indexOf(GAME_OPTIONS.roundTime);
+      if (i < 0) i = 1;
+      GAME_OPTIONS.roundTime = order[(i + (right ? 1 : -1) + order.length) % order.length];
+      saveGameOptions();
+      SoundFx.play('ui_move');
+      this._refresh();
+    }
+    if (kb.getKeyDown('escape') || GamepadHub.selectDown()) {
+      SoundFx.play('ui_ok');
+      this.mode = 'menu';
+      this._refresh();
     }
   },
 
@@ -640,7 +671,7 @@ phina.define('VersusScene', {
     this.ended = false;
     this.matchOver = false;
     this.finishWait = 0;
-    this.timeLeft = MATCH_TIME;
+    this.timeLeft = (GAME_OPTIONS.roundTime === 'unlimited') ? Infinity : (GAME_OPTIONS.roundTime || 60);
     this.frame = 0;
     this.hitstop = 0;
     this.shots = [];
@@ -769,7 +800,7 @@ phina.define('VersusScene', {
     }).addChildTo(this).setPosition(SCREEN_WIDTH - 24, 18);
 
     this.timerLabel = Label({
-      text: String(MATCH_TIME),
+      text: (GAME_OPTIONS.roundTime === 'unlimited') ? '∞' : String(GAME_OPTIONS.roundTime || 60),
       fontSize: 36,
       fill: '#fff',
       fontWeight: 'bold',
@@ -1019,10 +1050,10 @@ phina.define('VersusScene', {
     this._updateHud();
 
     this.frame += 1;
-    if (this.frame % 60 === 0) this.timeLeft -= 1;
+    if (GAME_OPTIONS.roundTime !== 'unlimited' && this.frame % 60 === 0) this.timeLeft -= 1;
     var ko = this.p1.hp <= 0 || this.p2.hp <= 0;
     if (ko) this._finish('ko');
-    else if (this.timeLeft <= 0) this._finish('time');
+    else if (GAME_OPTIONS.roundTime !== 'unlimited' && this.timeLeft <= 0) this._finish('time');
   },
 
   _updateShadows: function () {
@@ -1258,7 +1289,7 @@ phina.define('VersusScene', {
     this.p2Bar.width = Math.max(0.001, this.hpBarWidth * (this.p2.hp / this.p2.maxHp));
     this.p1Gauge.setValue(this.p1.gauge);
     this.p2Gauge.setValue(this.p2.gauge);
-    this.timerLabel.text = String(Math.max(0, this.timeLeft));
+    this.timerLabel.text = (GAME_OPTIONS.roundTime === 'unlimited') ? '∞' : String(Math.max(0, this.timeLeft));
   },
 
   _finish: function (reason) {
@@ -1308,7 +1339,7 @@ phina.define('VersusScene', {
     this._clearShots();
     this.ended = false;
     this.hitstop = 0;
-    this.timeLeft = MATCH_TIME;
+    this.timeLeft = (GAME_OPTIONS.roundTime === 'unlimited') ? Infinity : (GAME_OPTIONS.roundTime || 60);
     this.frame = 0;
     this.round += 1;
     this.roundLabel.text = 'ROUND ' + this.round;

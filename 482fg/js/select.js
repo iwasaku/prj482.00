@@ -13,6 +13,7 @@ var GAME_OPTIONS = {
   stageSelect2p: 'random',
   stageSelectCpu: 'random',
   cpuDifficulty: '中級',
+  roundTime: 60,
 };
 
 function loadGameOptions() {
@@ -36,6 +37,8 @@ function loadGameOptions() {
     if (saved.cpuDifficulty === 'easy' || saved.cpuDifficulty === '初級') GAME_OPTIONS.cpuDifficulty = '初級';
     else if (saved.cpuDifficulty === 'hard' || saved.cpuDifficulty === '上級') GAME_OPTIONS.cpuDifficulty = '上級';
     else if (saved.cpuDifficulty === 'normal' || saved.cpuDifficulty === '中級') GAME_OPTIONS.cpuDifficulty = '中級';
+    if (saved.roundTime === 30 || saved.roundTime === 60 || saved.roundTime === 99) GAME_OPTIONS.roundTime = saved.roundTime;
+    else if (saved.roundTime === 'unlimited' || saved.roundTime === '∞') GAME_OPTIONS.roundTime = 'unlimited';
   } catch (e) {}
 }
 
